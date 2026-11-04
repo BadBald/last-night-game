@@ -81,10 +81,14 @@ matchmaking queue — there are no room codes or passwords.
 - A single survivor never starts a match; the queue waits for a second player.
 - Every survivor receives a unique jacket colour.
 
-The client connects to `/ws` on the same origin by default. If you host the
-static client separately from the Node game server (for example Firebase
-Hosting for the client and Render/Railway/Fly for the server), set
-`VITE_WS_URL` at build time:
+The client connects to `/ws` on the same origin by default.
+
+**Permanent cloud server (Render, free tier):**
+https://last-night-game-cnjq.onrender.com
+
+The Firebase-hosted client (https://lastnightgame.web.app) connects to that
+server automatically. If you host the static client separately from the Node
+game server, set `VITE_WS_URL` at build time:
 
 ```bash
 VITE_WS_URL=wss://your-game-server.example.com/ws npm run build
