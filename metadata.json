@@ -1,0 +1,8 @@
+{
+  "name": "LAST NIGHT — Seven hours. One chance.",
+  "description": "A 2D top-down survival-horror roguelite set in an infected city. Scavenge scarce supplies, manage noise and darkness across seven deadly hours, and reach the helicopter extraction zone at 6:00 AM.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

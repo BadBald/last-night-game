@@ -1,0 +1,71 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  :root {
+    --font-display: 'Barlow Condensed', system-ui, sans-serif;
+    --font-sans: 'Plus Jakarta Sans', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  }
+
+  html,
+  body,
+  #root {
+    width: 100%;
+    height: 100%;
+    height: 100dvh;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    overscroll-behavior: none;
+    background-color: #090706;
+    font-family: var(--font-sans);
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+  }
+
+  canvas {
+    touch-action: none;
+  }
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+
+.font-mono-num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.safe-area-hud {
+  padding-top: max(0.5rem, env(safe-area-inset-top));
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+  padding-left: max(0.625rem, env(safe-area-inset-left));
+  padding-right: max(0.625rem, env(safe-area-inset-right));
+}
+
+.safe-area-landscape-hud {
+  padding-top: max(0.3rem, env(safe-area-inset-top));
+  padding-bottom: max(0.25rem, env(safe-area-inset-bottom));
+  padding-left: max(0.75rem, env(safe-area-inset-left));
+  padding-right: max(0.75rem, env(safe-area-inset-right));
+}
+
+.safe-area-controls {
+  padding-bottom: max(0.625rem, env(safe-area-inset-bottom));
+  padding-left: max(0.625rem, env(safe-area-inset-left));
+  padding-right: max(0.625rem, env(safe-area-inset-right));
+}
+
+.safe-area-landscape-controls {
+  padding-bottom: max(0.3rem, env(safe-area-inset-bottom));
+  padding-left: max(0.75rem, env(safe-area-inset-left));
+  padding-right: max(0.75rem, env(safe-area-inset-right));
+}
+
+.scroll-touch {
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}

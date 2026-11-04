@@ -1,0 +1,11 @@
+node_modules
+node_modules.old
+dist
+dev-dist
+.backup-original
+OLD GAME BUT NO API FOR RADIO
+.firebase
+.git
+*.log
+.env
+.env.local

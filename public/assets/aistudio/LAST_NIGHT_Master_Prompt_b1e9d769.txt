@@ -1,0 +1,340 @@
+LAST NIGHT — MASTER GAME DEVELOPMENT SPECIFICATION Subtitle: Seven
+hours. One chance.
+
+PROJECT OVERVIEW Build LAST NIGHT as a polished, genuinely playable 2D
+top-down survival-horror roguelite for browsers, supporting desktop and
+mobile. Use HTML5 Canvas, JavaScript, and CSS. The game must be a real
+playable application, not a mockup or static prototype.
+
+CORE CONCEPT An unknown biological outbreak has devastated a city. The
+infected are known as THE HOLLOW. The player is an ordinary survivor who
+receives a radio transmission: an evacuation helicopter will arrive at
+6:00 AM. The player must explore the city, scavenge supplies, manage
+survival resources, avoid or fight the infected, and reach the rooftop
+extraction zone before dawn.
+
+The central gameplay loop is: Explore → scavenge → manage resources →
+avoid/fight → survive another hour.
+
+The player should feel vulnerable. Ammunition and medical supplies are
+scarce. Noise has consequences. Decisions matter.
+
+TIME AND WIN CONDITION - One run lasts exactly 30 real-time minutes. -
+The game clock runs from 11:00 PM to 6:00 AM: seven in-game hours. -
+Each in-game hour lasts approximately 257.14 real-time seconds. - Use
+one authoritative game clock. - Opening inventory or other UI panels
+must not create unintended time exploits. - Pausing freezes the
+simulation. - The player wins only by being alive inside the extraction
+zone when the helicopter extraction completes at 6:00 AM. - Reaching
+6:00 AM somewhere else is not a victory. - Death at any moment,
+including 5:59 AM, ends the run.
+
+STORY AND CITY Create one interconnected city district, not a collection
+of disconnected levels. The city should include: 1. Residential district
+2. Commercial district 3. Supermarket 4. Pharmacy 5. Hospital 6. Police
+station 7. Industrial area 8. Underground parking 9. Rooftop extraction
+zone
+
+The world should contain roads, sidewalks, intersections, alleys,
+buildings, accessible interiors, doors, windows, furniture, obstacles,
+searchable containers, lighting, darkness, contamination zones, rooftop
+access, alternate paths, and blocked routes.
+
+Interiors must exist in the same world coordinate system. Do not
+teleport the player into separate scene instances when entering
+buildings.
+
+Keep the broad city layout recognizable between runs, but randomize
+loot, quantities, enemy patrols, selected blocked routes, and some
+environmental events and container contents. Each location must have a
+distinct identity, loot profile, and danger level.
+
+Location themes: - Residential: food, clothing, tools, household
+items. - Supermarket: food, water, snacks. - Pharmacy: bandages,
+antiseptic, painkillers. - Hospital: medical kits and rare treatment,
+with very high danger. - Police station: firearms, ammunition,
+protective equipment. - Industrial area: tools, fuel, batteries. -
+Underground parking: vehicles, fuel, mechanical supplies. - Rooftop:
+helicopter extraction.
+
+PLAYER AND CONTROLS The player is an ordinary human, not a superhero.
+Provide detailed pixel-art directional animations for idle, walking,
+running, crouching, aiming, shooting, reloading, melee attacks, taking
+damage, and death.
+
+Use a direct overhead top-down camera that smoothly follows the player.
+
+Desktop controls: - WASD: move - Mouse: aim - Left mouse button: shoot
+or attack - Shift: sprint - Ctrl: crouch - E: interact - R: reload - F:
+flashlight - Tab: inventory - Esc: pause
+
+Movement and aiming must be independent. The player faces the mouse.
+Sprinting consumes stamina. Crouching reduces noise and visibility.
+Implement collision detection and frame-rate-independent movement.
+
+Mobile controls must be purpose-built and responsive: - Left virtual
+joystick: movement - Right virtual joystick: aim - Dedicated fire,
+interact, sprint, flashlight, and inventory buttons
+
+Do not merely shrink the desktop interface for mobile.
+
+COMBAT Combat must use manual aiming. Never auto-target enemies. - Melee
+weapons: knife, baseball bat, crowbar, improvised weapons. - Ranged
+weapons: pistol, shotgun; additional weapons may be added later. - Give
+each weapon meaningful attributes: damage, attack speed, range,
+accuracy, noise, ammunition capacity, reload time, and durability where
+appropriate. - Bullets travel in the aimed direction. - Walls and solid
+objects block bullets. - Enemies have real hitboxes and health. -
+Reloading takes time. - Ammunition is limited. - Melee attacks use
+directional hit arcs. - Gunshots attract enemies. - The player must be
+able to miss.
+
+SURVIVAL SYSTEMS Implement four main attributes: - Health: zero means
+death. - Hunger: declines over time; low hunger reduces stamina recovery
+and eventually damages health. - Stamina: consumed by sprinting and
+strenuous actions; recovers gradually. - Contamination: increases
+through exposure to spores and contaminated zones; high contamination
+causes dangerous symptoms.
+
+Additional conditions may include bleeding, infection, exhaustion, and
+spore exposure.
+
+Items must have functional effects: - Canned food restores hunger. -
+Bandages stop bleeding. - Medkits restore health. - Antiseptic treats
+infected wounds. - Antiviral injection reduces contamination. -
+Batteries power the flashlight. - Radio receives transmissions. - Fuel
+canisters may support optional objectives.
+
+Balance hunger and contamination so that they create pressure without
+causing unavoidable or excessively rapid death.
+
+INVENTORY AND LOOT Create a 12-slot backpack with: - Item stacking -
+Selection and equipping weapons - Consumables - Dropping and swapping
+items - Item descriptions - Weight restrictions
+
+Support desktop drag-and-drop and mobile touch interactions.
+
+Every item should have a unique ID, name, description, category, icon,
+stack limit, weight, effects, and interaction type.
+
+Create randomized, location-specific loot tables. Do not give every
+building identical contents.
+
+Searchable containers should include cabinets, fridges, pharmacy
+shelves, medical cabinets, police lockers, vehicle trunks, toolboxes,
+storage boxes, desks, and drawers. Searching takes time and is not
+instantaneous.
+
+ENEMIES — THE HOLLOW Create four distinct enemy classes: 1. Crawler:
+fast, weak, aggressive; often appears in groups and chases the player.
+2. Still: motionless, corpse-like ambusher that attacks at close range.
+3. Bloom: releases infectious spores, creates contamination zones, and
+may release spores on death. It can control or deny routes. 4. Mimic:
+imitates human distress calls, creates false audio cues, investigates
+sounds, and ambushes the player. Rare and dangerous.
+
+Enemy AI must use a state machine with states such as: Idle, Patrol,
+Suspicious, Alert, Chase, Attack, Search, Return.
+
+Implement line of sight, sound detection, patrol routes, attack
+distance, damage, collision, health, death, and distinct movement
+patterns. Enemies must not see through solid walls. When an enemy loses
+sight of the player, it should investigate the last known position.
+Encounters should be dangerous but fair.
+
+SOUND AND STEALTH Sound is a core gameplay mechanic.
+
+Noise sources include: - Walking - Running - Crouching - Opening doors -
+Breaking glass - Searching containers - Melee attacks - Gunshots -
+Alarms
+
+Each noise event must have a source position, radius, intensity,
+duration, and type. Enemies within range investigate according to their
+behavior.
+
+Use positional audio and distance attenuation. Stealth must be a viable
+strategy, not a decorative feature.
+
+LIGHTING AND ATMOSPHERE Implement ambient darkness, a flashlight cone,
+dynamic lights, streetlights, interior lights, flickering lights,
+shadows, fog, and weather.
+
+At 1:00 AM, the power grid fails. Flashlights and batteries become
+important. The player must not see through walls. Darkness should create
+tension without hiding unavoidable attacks or making navigation unfair.
+
+SEVEN-HOUR TIMELINE - 11:00 PM: Start in a residential building. Initial
+scavenging; relatively quiet. - 12:00 AM: First encounters and
+opportunities to learn how noise works. - 1:00 AM: Power grid fails;
+flashlights and batteries become important. - 2:00 AM: Contamination
+spreads in selected areas; Blooms become more common. - 3:00 AM: Hunting
+phase; enemies and patrols become more aggressive. - 4:00 AM: Radio
+announces extraction coordinates. - 5:00 AM: Extraction zone becomes
+active; reach the rooftop. Enemies become more aggressive. - 5:45 AM:
+Helicopter becomes audible. - 5:50 AM: Searchlight appears. - 6:00 AM:
+Extraction succeeds only if the player is alive and inside the
+extraction zone.
+
+RANDOM EVENTS Use weighted, balanced event pools. Events must not cause
+unavoidable death.
+
+Possible events: - Power failure - Distant screams - Heavy rain that
+changes visibility and noise - Radio interference - Spore outbreak -
+Emergency siren - Blocked road - Optional survivor signal or rescue
+opportunity
+
+Events must respect the current hour and location.
+
+EXTRACTION SEQUENCE - At 4:00 AM, radio coordinates are transmitted. -
+At 5:00 AM, the extraction zone becomes active. - At 5:45 AM, helicopter
+approach audio begins. - At 5:50 AM, a searchlight appears. - At 6:00
+AM, extraction is possible only if the player is alive in the zone.
+
+Create a physical helicopter presence with visuals and audio, not merely
+a victory screen. The extraction sequence should include rotor sound,
+searchlight, wind, rain where applicable, nearby infected, boarding, and
+a cinematic fade.
+
+PERMADEATH AND PERSISTENT DATA When health reaches zero: - Stop the
+run. - Show a death animation and death screen. - Display run
+statistics. - Offer a restart.
+
+Restarting resets the player, inventory, attributes, enemies, loot,
+timer, events, and run-specific world state.
+
+Never save or restore an active run. Persistent storage may be used only
+for settings, audio preferences, controls, best time, records, and
+completed-run statistics.
+
+USER INTERFACE Use a dark, minimal, atmospheric interface.
+
+Main menu: LAST NIGHT “Seven hours. One chance.” - New Game - Continue
+(menu continuity only; never restore an active run) - Settings - Credits
+
+HUD: - Top-left: health, hunger, stamina, contamination. - Top-center:
+clock and countdown. - Bottom-left: equipped weapon and ammunition. -
+Bottom-right: inventory and contextual controls. - Center: small
+interaction prompts.
+
+Required screens: - Main menu - Settings - Inventory - Loot - Radio -
+Pause - Death - Victory
+
+Avoid clutter. Every visible button must work.
+
+AUDIO Use atmospheric rain, wind, distant sirens, footsteps, weapon
+sounds, reloading, doors, glass, enemy breathing and vocalizations,
+radio static, and helicopter rotor sounds.
+
+Use positional audio where appropriate. Sound must communicate gameplay
+information. Provide volume controls. Use original or properly licensed
+audio assets.
+
+TECHNICAL ARCHITECTURE Use HTML5 Canvas, JavaScript, and CSS. Keep the
+code modular and maintainable.
+
+Suggested project structure: src/ main.js game.js config.js engine/
+renderer.js camera.js input.js collision.js lighting.js audio.js
+entities/ player.js enemy.js projectile.js interactable.js systems/
+world.js inventory.js loot.js combat.js survival.js enemy-ai.js clock.js
+events.js extraction.js run-manager.js ui/ hud.js menus.js
+inventory-ui.js screens.js data/ items.js enemies.js map.js events.js
+assets/ sprites/ tiles/ characters/ enemies/ weapons/ audio/ ui/
+
+The architecture may evolve for a sound technical reason, but preserve
+separation of concerns.
+
+Use a fixed timestep where appropriate, delta-time movement, efficient
+collision and spatial partitioning, sprite atlases, object pooling,
+separate simulation and rendering, and responsive rendering.
+
+PERFORMANCE - Target 60 FPS on desktop. - Target stable 30–60 FPS on
+mobile. - Use visible-region culling. - Limit unnecessary AI
+calculations. - Use efficient collision detection. - Reuse projectiles
+and other frequently created objects where appropriate. - Load assets
+efficiently. - Scale rendering appropriately. - Do not sacrifice
+stability for visual effects.
+
+DEVELOPMENT STAGES Do not attempt to build all six stages in one
+untested operation.
+
+Stage 1 — Foundation: - Playable player - Smooth camera - Connected
+city - Movement - Buildings - Collision
+
+Stage 2 — World and scavenging: - Containers - Loot - Item database -
+Inventory
+
+Stage 3 — Combat and enemies: - Manual aiming - Weapons - Projectiles -
+Enemy AI - Sound
+
+Stage 4 — Survival simulation: - Health, hunger, stamina,
+contamination - Clock - Events
+
+Stage 5 — Extraction: - Radio - Coordinates - Helicopter - Death and
+victory
+
+Stage 6 — Polish: - Art - Animations - Audio - Mobile controls -
+Optimization
+
+After every stage: - Run the application. - Test the implemented
+features. - Inspect the console. - Fix errors. - Verify that previous
+systems still work. - Report only what is genuinely complete. - Continue
+only after the current stage is verified.
+
+TEST CASES Test at least: - Dying in the final minute. - Running out of
+ammunition. - Being chased into a building. - Opening inventory during
+combat. - Using medicine. - Receiving a radio transmission. - Reaching
+the extraction zone. - Missing extraction. - Pausing and resuming. -
+Restarting after death. - Refreshing the browser during a run; the run
+must not be restored.
+
+NON-NEGOTIABLE QUALITY RULES 1. Build a real game, not a mockup. 2.
+Every visible button must work. 3. Enemies must have real behavior. 4.
+Items must have real purposes. 5. Interactions must be functional. 6. Do
+not use placeholder graphics as final assets. 7. Do not leave TODOs for
+major features. 8. Do not replace working systems unnecessarily. 9.
+Never claim tests that were not performed. 10. Do not put the entire
+game in one giant, unmaintainable source file. 11. Keep the application
+playable throughout development. 12. Do not require external APIs for
+core gameplay. 13. Desktop and mobile controls must both function. 14.
+Verify systems together, not only in isolation. 15. If a feature is too
+complex, explain the limitation and implement a functional simpler
+version rather than pretending the full feature exists.
+
+DEFINITION OF COMPLETE The game is complete only when: - A new run
+starts correctly. - The city is explorable. - Buildings and interiors
+work. - Looting and inventory work. - Manual combat works. - All four
+enemy types work. - Sound and stealth work. - Survival attributes
+work. - Dynamic events work. - The seven-hour clock maps to 30 real-time
+minutes. - Radio transmissions work. - Helicopter extraction works. -
+Death and permadeath work. - Victory is achievable. - Desktop and mobile
+controls work. - No critical errors remain. - A full start-to-finish
+playtest has been performed.
+
+FIRST TASK — BEFORE CODING 1. Analyze the full specification. 2.
+Understand dependencies between systems. 3. Produce a concise
+implementation architecture. 4. Identify technical risks and
+dependencies. 5. Establish the project structure. 6. Define the first
+milestone.
+
+Then immediately begin Stage 1. Do not spend the response merely
+repeating the concept. Create actual working files and a playable
+application.
+
+Implement Stage 1 completely. Do not attempt all six stages in one
+untested operation.
+
+When Stage 1 is complete, report: - Files created. - Features
+implemented. - Tests performed. - Bugs discovered and fixed. - Remaining
+work.
+
+Wait for the next development instruction.
+
+FINAL DIRECTIVE Build LAST NIGHT as a polished, atmospheric,
+challenging, genuinely playable 2D survival-horror roguelite.
+
+The player must feel that every night, every bullet, every bandage, and
+every decision matters.
+
+Seven hours. One helicopter. One chance.
+
+LAST NIGHT.

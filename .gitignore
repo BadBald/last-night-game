@@ -1,0 +1,14 @@
+node_modules/
+node_modules.old/
+build/
+dist/
+dev-dist/
+coverage/
+.backup-original/
+OLD GAME BUT NO API FOR RADIO/
+.firebase/
+server.js
+.DS_Store
+*.log
+.env*
+!.env.example
