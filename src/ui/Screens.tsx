@@ -821,6 +821,13 @@ const ContinueDossierModal: React.FC<{
           </div>
         )}
 
+        <div className="mt-5 pt-3 border-t border-[#e4d4c6]/14 flex items-center justify-between gap-3">
+          <span className="text-[#d8c7b4] text-xs font-medium">
+            Install as App (no Chrome needed)
+          </span>
+          <PWAInstallButton compact />
+        </div>
+
         <div className="mt-6 flex items-center gap-3">
           <button
             type="button"
