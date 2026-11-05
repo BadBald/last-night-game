@@ -473,81 +473,9 @@ export class SoundEngine {
     sx: number,
     sy: number
   ) {
-    if (!this.ctx || !this.whiteNoiseBuffer || !this.noiseBuffer || this.muted) return;
-    const pos = this.getPositionalNodes(lx, ly, sx, sy, 900, 1.1);
-    if (!pos) return;
-    const ctx = this.ctx;
-    const now = ctx.currentTime;
-    const dur = kind === 'bloom' ? 0.72 : kind === 'still' ? 0.58 : 0.46;
-
-    // Deep sub-bass roar body
-    const sub = ctx.createOscillator();
-    sub.type = 'sawtooth';
-    const baseHz = kind === 'bloom' ? 58 : kind === 'crawler' ? 118 : kind === 'still' ? 96 : 132;
-    sub.frequency.setValueAtTime(baseHz * (0.9 + Math.random() * 0.2), now);
-    sub.frequency.exponentialRampToValueAtTime(baseHz * 0.42, now + dur);
-
-    const pre = ctx.createGain();
-    pre.gain.value = 2.2;
-    const shaper = ctx.createWaveShaper();
-    shaper.curve = this.monsterDriveCurve;
-    shaper.oversample = '2x';
-
-    const bp = ctx.createBiquadFilter();
-    bp.type = 'bandpass';
-    bp.frequency.setValueAtTime(baseHz * 2.6, now);
-    bp.frequency.exponentialRampToValueAtTime(baseHz * 1.4, now + dur);
-    bp.Q.value = 1.9;
-
-    const g = ctx.createGain();
-    g.gain.setValueAtTime(0.001, now);
-    g.gain.linearRampToValueAtTime(pos.gainScale * 0.78, now + 0.04);
-    g.gain.exponentialRampToValueAtTime(0.0008, now + dur);
-
-    sub.connect(pre);
-    pre.connect(shaper);
-    shaper.connect(bp);
-    bp.connect(g);
-    g.connect(pos.out);
-    sub.start(now);
-    sub.stop(now + dur + 0.05);
-
-    // Roaring breath / air rush
-    const air = ctx.createBufferSource();
-    air.buffer = this.whiteNoiseBuffer;
-    const airBp = ctx.createBiquadFilter();
-    airBp.type = 'bandpass';
-    airBp.frequency.setValueAtTime(620, now);
-    airBp.frequency.exponentialRampToValueAtTime(340, now + dur);
-    airBp.Q.value = 1.2;
-    const airG = ctx.createGain();
-    airG.gain.setValueAtTime(0.001, now);
-    airG.gain.linearRampToValueAtTime(pos.gainScale * 0.42, now + 0.05);
-    airG.gain.exponentialRampToValueAtTime(0.0008, now + dur);
-    air.connect(airBp);
-    airBp.connect(airG);
-    airG.connect(pos.out);
-    air.start(now, Math.random(), dur);
-
-    // High fang screech
-    const screech = ctx.createOscillator();
-    screech.type = 'square';
-    const sHz = kind === 'still' ? 1850 : kind === 'crawler' ? 2350 : 1240;
-    screech.frequency.setValueAtTime(sHz * (0.92 + Math.random() * 0.16), now);
-    screech.frequency.exponentialRampToValueAtTime(sHz * 0.55, now + dur * 0.6);
-    const sBp = ctx.createBiquadFilter();
-    sBp.type = 'bandpass';
-    sBp.frequency.value = sHz;
-    sBp.Q.value = 4.2;
-    const sG = ctx.createGain();
-    sG.gain.setValueAtTime(0.001, now);
-    sG.gain.linearRampToValueAtTime(pos.gainScale * 0.28, now + 0.03);
-    sG.gain.exponentialRampToValueAtTime(0.0008, now + dur * 0.6);
-    screech.connect(sBp);
-    sBp.connect(sG);
-    sG.connect(pos.out);
-    screech.start(now);
-    screech.stop(now + dur * 0.65);
+    // All creatures use recorded Hollow samples instead of procedural roar.
+    this.playEnemyVocal(kind, lx, ly, sx, sy, 'chase');
+    return;
   }
 
   public playGunshot(kind: 'pistol' | 'revolver' | 'shotgun') {
@@ -2630,12 +2558,8 @@ export class SoundEngine {
     sy: number,
     cue: 'spot' | 'ambient' | 'chase' | 'attack' | 'hurt' | 'death' = 'spot'
   ) {
-    // Only the Hollow ('still') uses the recorded samples; others keep procedural.
-    if (kind !== 'still') {
-      this.playEnemyVocalProcedural(kind, lx, ly, sx, sy, cue);
-      return;
-    }
-
+    // Use recorded Hollow samples for all creatures (replaces procedural vocals).
+    this.ensureUnlocked();
     if (!this.ctx || this.muted) return;
     // Cooldowns to avoid spam / cutting
     const now = this.ctx.currentTime;
