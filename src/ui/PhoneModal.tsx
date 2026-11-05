@@ -6,6 +6,9 @@ import {
   Compass,
   Flashlight,
   MapPin,
+  MessageCircle,
+  Mic,
+  MicOff,
   Play,
   Radio,
   Signal,
@@ -28,9 +31,12 @@ interface PhoneModalProps {
   onReplayBroadcast: (broadcastId: string) => void;
   onStopBroadcast: () => void;
   onClearUnreadRadio: () => void;
+  onSendChat: (text: string) => void;
+  onToggleMic: () => void;
+  onClearUnreadChat: () => void;
 }
 
-type PhoneAppTab = 'maps' | 'radio';
+type PhoneAppTab = 'maps' | 'radio' | 'chat';
 
 export const PhoneModal: React.FC<PhoneModalProps> = ({
   snap,
@@ -41,6 +47,9 @@ export const PhoneModal: React.FC<PhoneModalProps> = ({
   onReplayBroadcast,
   onStopBroadcast,
   onClearUnreadRadio,
+  onSendChat,
+  onToggleMic,
+  onClearUnreadChat,
 }) => {
   const { isCompactLandscape } = useViewportLayout();
   const gp = getGamepadGlyphs(snap.gamepadBrand);
@@ -62,7 +71,10 @@ export const PhoneModal: React.FC<PhoneModalProps> = ({
     if (activeTab === 'radio' && snap.unreadRadioCount > 0) {
       onClearUnreadRadio();
     }
-  }, [activeTab, snap.unreadRadioCount, onClearUnreadRadio]);
+    if (activeTab === 'chat' && snap.online.unreadChatCount > 0) {
+      onClearUnreadChat();
+    }
+  }, [activeTab, snap.unreadRadioCount, snap.online.unreadChatCount, onClearUnreadRadio, onClearUnreadChat]);
 
   // Gamepad navigation inside Survivor Phone
   useEffect(() => {
@@ -336,8 +348,8 @@ export const PhoneModal: React.FC<PhoneModalProps> = ({
         </button>
       </div>
 
-      {/* App Switcher Segmented Control: Maps | Radio */}
-      <div className="grid grid-cols-2 gap-1 p-1 rounded-xl bg-[#19130f] border border-[#e4d4c6]/14">
+      {/* App Switcher Segmented Control: Maps | Radio | Chat (online) */}
+      <div className={`grid ${snap.online.isOnlineMode ? 'grid-cols-3' : 'grid-cols-2'} gap-1 p-1 rounded-xl bg-[#19130f] border border-[#e4d4c6]/14`}>
         <button
           type="button"
           onClick={() => setActiveTab('maps')}
@@ -371,6 +383,29 @@ export const PhoneModal: React.FC<PhoneModalProps> = ({
             </span>
           )}
         </button>
+
+        {snap.online.isOnlineMode && (
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab('chat');
+              // mark read via parent? handled by setPanel? We'll clear by direct? Use onClearUnreadChat? none. We'll just reset locally not possible. Instead, parent handles via setPanel. Keep simple.
+            }}
+            className={`min-h-[40px] px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors whitespace-nowrap cursor-pointer ${
+              activeTab === 'chat'
+                ? 'bg-[#281e17] text-[#f7f2e7] border border-[#e26d27]/35'
+                : 'text-[#9c8b79] hover:text-[#d8c7b4]'
+            }`}
+          >
+            <MessageCircle className="w-3.5 h-3.5 shrink-0 text-[#f39c59]" />
+            <span>Chat</span>
+            {snap.online.unreadChatCount > 0 && (
+              <span className="font-mono-num text-[#e26d27]">
+                ({snap.online.unreadChatCount})
+              </span>
+            )}
+          </button>
+        )}
       </div>
     </div>
   );
@@ -870,6 +905,58 @@ export const PhoneModal: React.FC<PhoneModalProps> = ({
     </div>
   );
 
+  const renderChatApp = () => {
+    const scrollRef = useRef<HTMLDivElement | null>(null);
+    useEffect(() => {
+      if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }, [snap.online.chatMessages.length]);
+    const handleSend = (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Enter') {
+        const t = (e.target as HTMLInputElement).value.trim();
+        if (t) { onSendChat(t); (e.target as HTMLInputElement).value = ''; }
+      }
+    };
+    const isTalking = snap.online.selfTalking;
+    return (
+      <div className="space-y-2.5">
+        <div className="flex items-center justify-between gap-2 pb-2 border-b border-[#e4d4c6]/14">
+          <span className="text-[#d8c7b4] text-xs font-semibold">Squad Chat</span>
+          <button
+            type="button"
+            onClick={onToggleMic}
+            className={`min-h-[36px] px-3 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${isTalking ? 'bg-[#c9363b] text-[#f8eded]' : 'bg-[#19130f] text-[#9c8b79] border border-[#e4d4c6]/16'}`}
+          >
+            {isTalking ? <Mic className="w-3.5 h-3.5" /> : <MicOff className="w-3.5 h-3.5" />}
+            {isTalking ? 'Talking' : 'Hold to Talk'}
+          </button>
+        </div>
+        <div ref={scrollRef} className="max-h-[220px] overflow-y-auto scroll-touch space-y-1.5 pr-1">
+          {snap.online.chatMessages.length === 0 && (
+            <p className="text-xs text-[#9c8b79] text-center mt-6">No messages yet.</p>
+          )}
+          {snap.online.chatMessages.map((m) => (
+            <div key={m.id} className={`flex flex-col ${m.fromId === snap.online.selfId ? 'items-end' : 'items-start'}`}>
+              <span className="text-[10px] font-mono-num text-[#9c8b79] mb-0.5">{m.fromCallsign}</span>
+              <div className={`max-w-[85%] px-2.5 py-1 rounded-lg text-xs leading-relaxed ${m.fromId === snap.online.selfId ? 'bg-[#e26d27] text-[#120d0a] rounded-br-sm' : 'bg-[#19130f] border border-[#e4d4c6]/16 text-[#f7f2e7] rounded-bl-sm'}`}>
+                {m.text}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="flex items-center gap-2 pt-2 border-t border-[#e4d4c6]/14">
+          <input
+            type="text"
+            placeholder="Type a message..."
+            className="flex-1 min-h-[36px] px-2.5 py-1.5 rounded-lg bg-[#0b0806] border border-[#e4d4c6]/16 text-[#f7f2e7] text-xs placeholder:text-[#9c8b79] focus:outline-none focus:border-[#e26d27]/60"
+            maxLength={200}
+            onKeyDown={handleSend}
+          />
+        </div>
+        <p className="text-[10px] text-[#9c8b79]">Press T to talk on PC. Mic button toggles talk on mobile.</p>
+      </div>
+    );
+  };
+
   return (
     <div
       className="fixed inset-0 z-20 pointer-events-auto bg-[#070504]/74 flex items-center justify-center p-2 sm:p-4"
@@ -903,14 +990,22 @@ export const PhoneModal: React.FC<PhoneModalProps> = ({
             <div className="mt-2.5 grid grid-cols-12 gap-4 items-start">
               <div className="col-span-5">{renderClockAndControls()}</div>
               <div className="col-span-7">
-                {activeTab === 'maps' ? renderMapsApp() : renderRadioApp()}
+                {activeTab === 'maps'
+                  ? renderMapsApp()
+                  : activeTab === 'chat'
+                  ? renderChatApp()
+                  : renderRadioApp()}
               </div>
             </div>
           ) : (
             <div className="mt-2 space-y-3">
               {renderClockAndControls()}
               <div className="pt-1 border-t border-[#e4d4c6]/14">
-                {activeTab === 'maps' ? renderMapsApp() : renderRadioApp()}
+                {activeTab === 'maps'
+                  ? renderMapsApp()
+                  : activeTab === 'chat'
+                  ? renderChatApp()
+                  : renderRadioApp()}
               </div>
             </div>
           )}

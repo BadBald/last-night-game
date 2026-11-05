@@ -168,6 +168,7 @@ export class GameEngine {
   private chatMessages: ChatMessage[] = [];
   private unreadChatCount = 0;
   public isTalking = false;
+  private talkingPlayerIds = new Set<string>();
   private remoteSurvivors = new Map<string, RemoteSurvivorState>();
   private voiceChat: VoiceChatManager | null = null;
   private pendingSpawnPos: { x: number; y: number } | null = null;
@@ -552,9 +553,12 @@ export class GameEngine {
       },
       onVoiceState: (data) => {
         if (!this.isOnlineMatch) return;
+        if (data.talking) this.talkingPlayerIds.add(data.playerId);
+        else this.talkingPlayerIds.delete(data.playerId);
         if (this.voiceChat) {
           this.voiceChat.setPeerTalking(data.playerId, data.talking);
         }
+        this.emitSnapshot();
       },
     });
 
@@ -652,6 +656,7 @@ export class GameEngine {
       this.voiceChat = null;
     }
     this.isTalking = false;
+    this.talkingPlayerIds.clear();
     this.chatMessages = [];
     this.unreadChatCount = 0;
     this.pendingSpawnPos = null;
@@ -737,6 +742,8 @@ export class GameEngine {
     this.remoteSurvivors.clear();
     this.chatMessages = [];
     this.unreadChatCount = 0;
+    this.talkingPlayerIds.clear();
+    this.isTalking = false;
     this.killFeed = [];
     this.localPvpKills = 0;
     this.localPlacement = undefined;
@@ -1270,6 +1277,11 @@ export class GameEngine {
     this.emitSnapshot();
   }
 
+  public clearUnreadChat() {
+    this.unreadChatCount = 0;
+    this.emitSnapshot();
+  }
+
   public sendChatMessage(text: string) {
     if (!this.isOnlineMatch || !this.mp.isConnected) return;
     const t = text.trim().slice(0, 200);
@@ -1296,6 +1308,15 @@ export class GameEngine {
   public enableVoice() {
     if (!this.voiceChat) return;
     void this.voiceChat.enable();
+  }
+
+  public toggleTalking() {
+    if (!this.voiceChat) return;
+    void this.voiceChat.enable().then(() => {
+      this.isTalking = !this.isTalking;
+      this.voiceChat?.setTalking(this.isTalking);
+      this.emitSnapshot();
+    });
   }
 
   public togglePause() {
@@ -3491,6 +3512,8 @@ export class GameEngine {
         killFeed: [...this.killFeed],
         chatMessages: [...this.chatMessages],
         unreadChatCount: this.unreadChatCount,
+        selfTalking: this.isTalking,
+        talkingPlayerIds: [...this.talkingPlayerIds],
       },
       runStats: { ...this.runStats },
       records: { ...this.records },

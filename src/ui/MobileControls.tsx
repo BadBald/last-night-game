@@ -625,25 +625,6 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
               )}
             </button>
 
-            {snap.online.isOnlineMode && (
-              <button
-                type="button"
-                onPointerDown={(e) => {
-                  e.preventDefault();
-                  onToggleChat();
-                }}
-                className="relative min-w-[48px] min-h-[44px] px-2.5 rounded-xl border flex items-center justify-center gap-1 text-xs font-semibold active:scale-95 transition-transform bg-[#110c09]/92 text-[#d8c7b4] border-[#e4d4c6]/18"
-                aria-label="Open Squad Chat"
-              >
-                <MessageCircle className="w-4 h-4 shrink-0" />
-                <span className="hidden xs:inline">Chat</span>
-                {snap.online.unreadChatCount > 0 && (
-                  <span className="font-mono-num text-[#e26d27]">
-                    ({snap.online.unreadChatCount})
-                  </span>
-                )}
-              </button>
-            )}
 
             <button
               type="button"

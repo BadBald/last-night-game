@@ -565,7 +565,7 @@ const EndScreenModal: React.FC<{
 
   return (
     <div className="fixed inset-0 z-30 bg-[#070504]/90 flex items-center justify-center p-3 sm:p-4">
-      <div className="w-full max-w-lg max-h-[92dvh] overflow-y-auto scroll-touch bg-[#120d0a]/96 border border-[#e4d4c6]/18 rounded-2xl p-5 sm:p-8 shadow-2xl">
+      <div className="w-full max-w-lg max-h-[92dvh] flex flex-col bg-[#120d0a]/96 border border-[#e4d4c6]/18 rounded-2xl p-4 sm:p-8 shadow-2xl overflow-hidden">
         <div className="text-xs font-mono-num text-[#9c8b79]">
           {isWin
             ? `06:00 AM · ${rs.extractionSiteName.toUpperCase()}`
@@ -590,11 +590,12 @@ const EndScreenModal: React.FC<{
           {rs.causeOfDeath}
         </p>
 
-        <div className="my-4">
+        <div className="my-3 shrink-0">
           <DottedRule />
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-2.5 gap-x-6 text-xs font-mono-num">
+        <div className="flex-1 min-h-0 overflow-y-auto scroll-touch pr-1 -mr-1">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-2.5 gap-x-6 text-xs font-mono-num">
           <StatRow label="Assigned LZ" value={rs.extractionSiteName} />
           <StatRow label="Final Clock" value={rs.finalTimeFormatted} />
           <StatRow
@@ -635,8 +636,9 @@ const EndScreenModal: React.FC<{
             value={`${Math.round(rs.distanceTraveledMeters)} m`}
           />
         </div>
+        </div>
 
-        <div className="mt-6 flex items-center gap-3">
+        <div className="mt-4 shrink-0 flex items-center gap-3">
           {rs.isOnlineMatch ? (
             <button
               type="button"
@@ -828,7 +830,7 @@ const ContinueDossierModal: React.FC<{
           <PWAInstallButton compact />
         </div>
 
-        <div className="mt-6 flex items-center gap-3">
+        <div className="mt-4 shrink-0 flex items-center gap-3">
           <button
             type="button"
             onClick={onStartNewGame}

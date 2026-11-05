@@ -507,6 +507,8 @@ export interface OnlineSessionSnapshot {
   killFeed: KillFeedEntry[];
   chatMessages: ChatMessage[];
   unreadChatCount: number;
+  selfTalking: boolean;
+  talkingPlayerIds: string[];
 }
 
 export interface ExtractionState {

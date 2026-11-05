@@ -89,6 +89,9 @@ export default function App() {
               onReplayBroadcast={(broadcastId) => engine.playRadioBroadcast(broadcastId)}
               onStopBroadcast={() => engine.stopRadioBroadcast()}
               onClearUnreadRadio={() => engine.clearUnreadRadio()}
+              onSendChat={(text) => engine.sendChatMessage(text)}
+              onToggleMic={() => engine.toggleTalking()}
+              onClearUnreadChat={() => engine.clearUnreadChat()}
             />
           )}
 

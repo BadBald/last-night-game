@@ -7,6 +7,8 @@ import {
   Pause,
   Smartphone,
   MessageCircle,
+  Mic,
+  MicOff,
   Volume2,
   VolumeX,
 } from 'lucide-react';
@@ -191,25 +193,19 @@ export const HUD: React.FC<HUDProps> = ({
             >
               <Smartphone className="w-3.5 h-3.5" />
             </LandscapeIconBtn>
+
              {snap.online.isOnlineMode && (
-               <LandscapeIconBtn
-                 onClick={onToggleChat}
-                 label="Open Squad Chat"
-                 active={snap.panel === 'CHAT'}
-                 badgeCount={snap.online.unreadChatCount}
+               <div
+                 className={`min-h-[40px] px-2 flex items-center gap-1 rounded-xl border text-xs font-semibold ${
+                   snap.online.selfTalking
+                     ? 'bg-[#c9363b]/20 text-[#f3a093] border-[#c9363b]/60'
+                     : 'bg-[#19130f] text-[#9c8b79] border-[#e4d4c6]/16'
+                 }`}
+                 title="Push-to-talk (hold T)"
                >
-                 <MessageCircle className="w-3.5 h-3.5" />
-               </LandscapeIconBtn>
-             )}
-             {snap.online.isOnlineMode && (
-               <LandscapeIconBtn
-                 onClick={onToggleChat}
-                 label="Open Squad Chat"
-                 active={snap.panel === 'CHAT'}
-                 badgeCount={snap.online.unreadChatCount}
-               >
-                 <MessageCircle className="w-3.5 h-3.5" />
-               </LandscapeIconBtn>
+                 {snap.online.selfTalking ? <Mic className="w-3.5 h-3.5" /> : <MicOff className="w-3.5 h-3.5" />}
+                 <span className="hidden sm:inline">{snap.online.selfTalking ? 'Talking' : 'T: Talk'}</span>
+               </div>
              )}
 
             <LandscapeIconBtn
