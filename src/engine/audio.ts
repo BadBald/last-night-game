@@ -2589,7 +2589,125 @@ export class SoundEngine {
     shock.start(now, Math.random(), 0.32);
   }
 
+  // Cached Hollow sample buffers (loaded lazily)
+  private hollowBuffers: Record<string, AudioBuffer | null> = {};
+  private hollowBufferLoading: Record<string, boolean> = {};
+  private hollowLastPlay: Record<string, number> = {};
+  private hollowActive: AudioBufferSourceNode[] = [];
+
+  private hollowSampleForCue(cue: string): string {
+    if (cue === 'attack') return 'Hollow attacks.mp3';
+    if (cue === 'hurt' || cue === 'death') return 'Hollow  Bites.mp3';
+    if (cue === 'chase' || cue === 'spot') return 'Hollow  far.mp3';
+    return 'Hollow idle arround.mp3';
+  }
+
+  private async loadHollowBuffer(name: string) {
+    if (this.hollowBuffers[name]) return this.hollowBuffers[name];
+    if (this.hollowBufferLoading[name]) return null;
+    this.hollowBufferLoading[name] = true;
+    try {
+      this.ensureUnlocked();
+      if (!this.ctx) return null;
+      const resp = await fetch('/assets/hollow%20audio/' + encodeURIComponent(name).replace(/%20/g, '%20'));
+      if (!resp.ok) { this.hollowBufferLoading[name]=false; return null; }
+      const ab = await resp.arrayBuffer();
+      const buf = await this.ctx.decodeAudioData(ab.slice(0));
+      this.hollowBuffers[name] = buf;
+      this.hollowBufferLoading[name] = false;
+      return buf;
+    } catch {
+      this.hollowBufferLoading[name] = false;
+      return null;
+    }
+  }
+
   public playEnemyVocal(
+    kind: 'crawler' | 'still' | 'bloom' | 'mimic',
+    lx: number,
+    ly: number,
+    sx: number,
+    sy: number,
+    cue: 'spot' | 'ambient' | 'chase' | 'attack' | 'hurt' | 'death' = 'spot'
+  ) {
+    // Only the Hollow ('still') uses the recorded samples; others keep procedural.
+    if (kind !== 'still') {
+      this.playEnemyVocalProcedural(kind, lx, ly, sx, sy, cue);
+      return;
+    }
+
+    if (!this.ctx || this.muted) return;
+    // Cooldowns to avoid spam / cutting
+    const now = this.ctx.currentTime;
+    const cueKey = cue;
+    const cooldown =
+      cue === 'attack' ? 0.35 :
+      cue === 'hurt' ? 0.28 :
+      cue === 'death' ? 0.5 :
+      cue === 'chase' ? 1.6 :
+      cue === 'spot' ? 1.2 :
+      2.4;
+    const last = this.hollowLastPlay[cueKey] || -10;
+    if (now - last < cooldown) return;
+    this.hollowLastPlay[cueKey] = now;
+
+    const sampleName = this.hollowSampleForCue(cue);
+    const pos = this.getPositionalNodes(lx, ly, sx, sy, cue === 'ambient' ? 760 : 920, 1.1);
+    if (!pos) return;
+
+    const playBuffer = (buf: AudioBuffer) => {
+      if (!this.ctx) return;
+      const ctx = this.ctx;
+      const t0 = ctx.currentTime;
+      if (this.hollowActive.length > 6) return; // mix cap
+
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      // Slight pitch variance for organic feel
+      src.playbackRate.value = 0.96 + Math.random() * 0.08;
+
+      const g = ctx.createGain();
+      // Attack ramp (no hard cut-in), sustain, release fade
+      const attack = cue === 'attack' ? 0.012 : 0.06;
+      const dur = Math.min(buf.duration, cue === 'ambient' ? 4.0 : buf.duration);
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(pos.gainScale * 0.85, t0 + attack);
+      if (cue !== 'ambient') {
+        g.gain.exponentialRampToValueAtTime(0.0008, t0 + dur);
+      }
+
+      // Monster vocal tract coloration (bandpass)
+      const bp = ctx.createBiquadFilter();
+      bp.type = 'bandpass';
+      bp.frequency.value = cue === 'attack' ? 620 : cue === 'hurt' ? 780 : 420;
+      bp.Q.value = 1.6;
+
+      src.connect(bp);
+      bp.connect(g);
+      g.connect(pos.out);
+
+      src.start(t0);
+      if (cue !== 'ambient') {
+        src.stop(t0 + dur + 0.05);
+      }
+      this.hollowActive.push(src);
+      src.onended = () => {
+        try { src.disconnect(); bp.disconnect(); g.disconnect(); } catch {}
+        this.hollowActive = this.hollowActive.filter((x) => x !== src);
+      };
+    };
+
+    const cached = this.hollowBuffers[sampleName];
+    if (cached) {
+      playBuffer(cached);
+    } else {
+      this.loadHollowBuffer(sampleName).then((buf) => {
+        if (buf) playBuffer(buf);
+      });
+    }
+  }
+
+  public playEnemyVocalProcedural(
     kind: 'crawler' | 'still' | 'bloom' | 'mimic',
     lx: number,
     ly: number,
