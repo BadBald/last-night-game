@@ -6,6 +6,7 @@ import {
   Minimize2,
   Pause,
   Smartphone,
+  MessageCircle,
   Volume2,
   VolumeX,
 } from 'lucide-react';
@@ -24,6 +25,7 @@ interface HUDProps {
   onToggleFullscreen: () => void;
   onToggleInventory: () => void;
   onTogglePhone: () => void;
+  onToggleChat: () => void;
   onToggleMute: () => void;
   onTogglePause: () => void;
   onQuickSlotClick: (slotIdx: number) => void;
@@ -39,6 +41,7 @@ export const HUD: React.FC<HUDProps> = ({
   onToggleFullscreen,
   onToggleInventory,
   onTogglePhone,
+  onToggleChat,
   onToggleMute,
   onTogglePause,
   onQuickSlotClick,
@@ -188,6 +191,26 @@ export const HUD: React.FC<HUDProps> = ({
             >
               <Smartphone className="w-3.5 h-3.5" />
             </LandscapeIconBtn>
+             {snap.online.isOnlineMode && (
+               <LandscapeIconBtn
+                 onClick={onToggleChat}
+                 label="Open Squad Chat"
+                 active={snap.panel === 'CHAT'}
+                 badgeCount={snap.online.unreadChatCount}
+               >
+                 <MessageCircle className="w-3.5 h-3.5" />
+               </LandscapeIconBtn>
+             )}
+             {snap.online.isOnlineMode && (
+               <LandscapeIconBtn
+                 onClick={onToggleChat}
+                 label="Open Squad Chat"
+                 active={snap.panel === 'CHAT'}
+                 badgeCount={snap.online.unreadChatCount}
+               >
+                 <MessageCircle className="w-3.5 h-3.5" />
+               </LandscapeIconBtn>
+             )}
 
             <LandscapeIconBtn
               onClick={onToggleInventory}

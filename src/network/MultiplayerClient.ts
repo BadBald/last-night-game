@@ -5,6 +5,7 @@ import {
   LobbyPlayerSummary,
   PlayerActionAnim,
   PublicRoomSummary,
+  ChatMessage,
 } from '../types';
 
 export interface NetPlayerPayload {
@@ -155,6 +156,14 @@ export interface MultiplayerClientHandlers {
   onWorldGroundItemsDropped: (items: GroundItem[]) => void;
   onWorldGroundItemTaken: (groundItemId: string) => void;
   onWorldGeneratorPowered: () => void;
+  onChatMessage: (msg: ChatMessage) => void;
+  onVoiceSignal: (data: {
+    fromId: string;
+    targetId: string;
+    kind: 'offer' | 'answer' | 'ice';
+    payload: unknown;
+  }) => void;
+  onVoiceState: (data: { playerId: string; callsign: string; talking: boolean }) => void;
 }
 
 export class MultiplayerClient {
@@ -423,6 +432,22 @@ export class MultiplayerClient {
       }
       case 'world:generator_powered': {
         this.handlers.onWorldGeneratorPowered();
+        break;
+      }
+      case 'chat:message': {
+        this.handlers.onChatMessage(msg as unknown as ChatMessage);
+        break;
+      }
+      case 'voice:signal': {
+        this.handlers.onVoiceSignal(
+          msg as unknown as Parameters<MultiplayerClientHandlers['onVoiceSignal']>[0]
+        );
+        break;
+      }
+      case 'voice:state': {
+        this.handlers.onVoiceState(
+          msg as unknown as Parameters<MultiplayerClientHandlers['onVoiceState']>[0]
+        );
         break;
       }
       default:

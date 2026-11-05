@@ -852,6 +852,50 @@ async function startServer() {
 
       if (room.phase !== 'IN_PROGRESS') return;
 
+      if (type === 'chat:message') {
+        const text = typeof msg.text === 'string' ? msg.text.trim().slice(0, 200) : '';
+        if (!text) return;
+        broadcastRoom(room, {
+          type: 'chat:message',
+          id: `${player.id}-${Date.now()}`,
+          fromId: player.id,
+          fromCallsign: player.callsign,
+          text,
+          timestamp: Date.now(),
+          x: typeof msg.x === 'number' ? msg.x : player.x,
+          y: typeof msg.y === 'number' ? msg.y : player.y,
+        });
+        return;
+      }
+
+      if (type === 'voice:signal') {
+        const targetId = typeof msg.targetId === 'string' ? msg.targetId : '';
+        const target = room.players.get(targetId);
+        if (!target) return;
+        sendJson(target.ws, {
+          type: 'voice:signal',
+          fromId: player.id,
+          targetId,
+          kind: typeof msg.kind === 'string' ? msg.kind : 'offer',
+          payload: msg.payload ?? null,
+        });
+        return;
+      }
+
+      if (type === 'voice:state') {
+        broadcastRoom(
+          room,
+          {
+            type: 'voice:state',
+            playerId: player.id,
+            callsign: player.callsign,
+            talking: Boolean(msg.talking),
+          },
+          player.id
+        );
+        return;
+      }
+
       if (type === 'player:update') {
         if (!player.alive) return;
         if (typeof msg.x === 'number') player.x = msg.x;

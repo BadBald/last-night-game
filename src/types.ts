@@ -14,7 +14,8 @@ export type OverlayPanel =
   | 'SETTINGS'
   | 'CREDITS'
   | 'CONTINUE_DOSSIER'
-  | 'ONLINE_LOBBY';
+  | 'ONLINE_LOBBY'
+  | 'CHAT';
 
 export type DistrictId =
   | 'village'
@@ -476,6 +477,15 @@ export interface KillFeedEntry {
   timestamp: number;
 }
 
+export interface ChatMessage {
+  id: string;
+  fromId: string;
+  fromCallsign: string;
+  text: string;
+  timestamp: number;
+  isSelf?: boolean;
+}
+
 export interface OnlineSessionSnapshot {
   isOnlineMode: boolean;
   wsConnected: boolean;
@@ -495,6 +505,8 @@ export interface OnlineSessionSnapshot {
   roster: LobbyPlayerSummary[];
   publicLobbies: PublicRoomSummary[];
   killFeed: KillFeedEntry[];
+  chatMessages: ChatMessage[];
+  unreadChatCount: number;
 }
 
 export interface ExtractionState {

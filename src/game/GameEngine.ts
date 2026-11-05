@@ -25,6 +25,7 @@ import {
   NetPlayerPayload,
   RoomLobbyPayload,
 } from '../network/MultiplayerClient';
+import { VoiceChatManager } from '../network/VoiceChatManager';
 import { formatCountdown, formatGameClock, getHourIndex } from '../systems/clock';
 import {
   performPlayerAttack,
@@ -68,6 +69,7 @@ import {
   InteractionPrompt,
   InventoryItemInstance,
   KillFeedEntry,
+  ChatMessage,
   LobbyPlayerSummary,
   NoiseEvent,
   ObstacleProp,
@@ -163,7 +165,11 @@ export class GameEngine {
   private lobbyRoster: LobbyPlayerSummary[] = [];
   private publicLobbies: PublicRoomSummary[] = [];
   private killFeed: KillFeedEntry[] = [];
+  private chatMessages: ChatMessage[] = [];
+  private unreadChatCount = 0;
+  public isTalking = false;
   private remoteSurvivors = new Map<string, RemoteSurvivorState>();
+  private voiceChat: VoiceChatManager | null = null;
   private pendingSpawnPos: { x: number; y: number } | null = null;
   private serverElapsedSeconds = 0;
   private survivorsInLZ = 0;
@@ -261,6 +267,7 @@ export class GameEngine {
       onPlayerJoinedMidMatch: (netPlayer, lobby) => {
         this.applyRoomLobbyPayload(lobby);
         this.upsertRemoteSurvivor(netPlayer, true);
+        if (this.voiceChat) this.voiceChat.ensurePeer(netPlayer.id);
         this.pushToast(
           'Survivor Entered Sector',
           `${netPlayer.callsign} arrived in Oakhaven (${lobby.aliveCount} alive).`,
@@ -270,6 +277,7 @@ export class GameEngine {
       },
       onPlayerLeftMidMatch: (playerId, callsign, aliveRemaining) => {
         this.remoteSurvivors.delete(playerId);
+        if (this.voiceChat) this.voiceChat.removePeer(playerId);
         this.onlineAliveCount = aliveRemaining;
         this.pushToast(
           'Signal Lost',
@@ -303,6 +311,7 @@ export class GameEngine {
         for (const existingId of this.remoteSurvivors.keys()) {
           if (!seenIds.has(existingId)) {
             this.remoteSurvivors.delete(existingId);
+            if (this.voiceChat) this.voiceChat.removePeer(existingId);
           }
         }
       },
@@ -519,6 +528,34 @@ export class GameEngine {
           if (pr.kind === 'generator') pr.powered = true;
         }
       },
+      onChatMessage: (msg) => {
+        if (!this.isOnlineMatch) return;
+        this.chatMessages = [...this.chatMessages, msg].slice(-50);
+        if (msg.fromId !== this.selfId) {
+          this.unreadChatCount += 1;
+          try {
+            if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+              navigator.vibrate([120, 60, 120]);
+            }
+          } catch {
+            // ignore
+          }
+          this.pushToast('Message', `${msg.fromCallsign}: ${msg.text}`, false);
+        }
+        this.emitSnapshot();
+      },
+      onVoiceSignal: (data) => {
+        if (!this.isOnlineMatch) return;
+        if (this.voiceChat) {
+          this.voiceChat.handleSignal(data);
+        }
+      },
+      onVoiceState: (data) => {
+        if (!this.isOnlineMatch) return;
+        if (this.voiceChat) {
+          this.voiceChat.setPeerTalking(data.playerId, data.talking);
+        }
+      },
     });
 
     this.world = buildCityWorld();
@@ -610,6 +647,13 @@ export class GameEngine {
     this.lobbyRoster = [];
     this.killFeed = [];
     this.remoteSurvivors.clear();
+    if (this.voiceChat) {
+      this.voiceChat.disable();
+      this.voiceChat = null;
+    }
+    this.isTalking = false;
+    this.chatMessages = [];
+    this.unreadChatCount = 0;
     this.pendingSpawnPos = null;
     this.survivorsInLZ = 0;
     this.extractionContested = false;
@@ -691,6 +735,8 @@ export class GameEngine {
     this.applyRoomLobbyPayload(lobby);
     this.isOnlineMatch = true;
     this.remoteSurvivors.clear();
+    this.chatMessages = [];
+    this.unreadChatCount = 0;
     this.killFeed = [];
     this.localPvpKills = 0;
     this.localPlacement = undefined;
@@ -757,9 +803,28 @@ export class GameEngine {
       }
     }
 
+    // Voice chat setup (push-to-talk, proximity gain)
+    this.voiceChat = new VoiceChatManager({
+      sendSignal: (data) => {
+        this.mp.send({ type: 'voice:signal', targetId: data.targetId, kind: data.kind, payload: data.payload });
+      },
+      sendState: (talking) => {
+        this.mp.send({ type: 'voice:state', talking });
+      },
+      getSelfId: () => this.selfId,
+      getRemoteIds: () => [...this.remoteSurvivors.keys()],
+      getDistance: (remoteId) => {
+        const rs = this.remoteSurvivors.get(remoteId);
+        if (!rs) return 99999;
+        return Math.hypot(rs.x - this.player.x, rs.y - this.player.y);
+      },
+    });
+    void this.voiceChat.enable();
+
     for (const np of players) {
       if (np.id !== this.selfId) {
         this.upsertRemoteSurvivor(np, true);
+        this.voiceChat.ensurePeer(np.id);
       }
     }
 
@@ -1196,10 +1261,41 @@ export class GameEngine {
         this.sound.playRadioStatic(false);
       }
     }
+    if (this.panel === 'CHAT') {
+      this.unreadChatCount = 0;
+    }
     if (this.panel === 'NONE' && this.screen === 'PLAYING') {
       this.canvas.focus({ preventScroll: true });
     }
     this.emitSnapshot();
+  }
+
+  public sendChatMessage(text: string) {
+    if (!this.isOnlineMatch || !this.mp.isConnected) return;
+    const t = text.trim().slice(0, 200);
+    if (!t) return;
+    // optimistic local echo
+    const msg: ChatMessage = {
+      id: `${this.selfId || 'self'}-${Date.now()}`,
+      fromId: this.selfId || '',
+      fromCallsign: this.callsign || 'You',
+      text: t,
+      timestamp: Date.now(),
+      isSelf: true,
+    };
+    this.chatMessages = [...this.chatMessages, msg].slice(-50);
+    this.emitSnapshot();
+    this.mp.send({
+      type: 'chat:message',
+      text: t,
+      x: Math.round(this.player.x),
+      y: Math.round(this.player.y),
+    });
+  }
+
+  public enableVoice() {
+    if (!this.voiceChat) return;
+    void this.voiceChat.enable();
   }
 
   public togglePause() {
@@ -1673,6 +1769,9 @@ export class GameEngine {
     }
 
     this.updateRemoteSurvivorsInterpolation(dt);
+    if (this.isOnlineMatch && this.voiceChat) {
+      this.voiceChat.updateProximity();
+    }
 
     if (this.player.animState === 'dead') {
       this.deathDelayTimer -= dt;
@@ -1703,6 +1802,17 @@ export class GameEngine {
         (this.panel === 'NONE' && this.input.consumeGamepadButton('r3'))
       ) {
         this.toggleFlashlight();
+      }
+      if (this.isOnlineMatch && this.input.consumeJustPressed('KeyC')) {
+        this.setPanel(this.panel === 'CHAT' ? 'NONE' : 'CHAT');
+      }
+      // Push-to-talk (T)
+      if (this.isOnlineMatch && this.voiceChat) {
+        const wantTalk = this.input.isHeld('KeyT');
+        if (wantTalk !== this.isTalking) {
+          this.isTalking = wantTalk;
+          this.voiceChat.setTalking(wantTalk);
+        }
       }
     }
 
@@ -3379,6 +3489,8 @@ export class GameEngine {
         roster: [...this.lobbyRoster],
         publicLobbies: [...this.publicLobbies],
         killFeed: [...this.killFeed],
+        chatMessages: [...this.chatMessages],
+        unreadChatCount: this.unreadChatCount,
       },
       runStats: { ...this.runStats },
       records: { ...this.records },

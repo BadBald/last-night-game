@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from 'react';
 import { GameEngine } from './game/GameEngine';
 import { UISnapshot } from './types';
 import { HUD } from './ui/HUD';
+import { ChatModal } from './ui/ChatModal';
 import { InventoryModal } from './ui/InventoryModal';
 import { MobileControls } from './ui/MobileControls';
 import { OfflineIndicator } from './ui/PWAInstallButton';
@@ -70,6 +71,7 @@ export default function App() {
                 )
               }
               onTogglePhone={() => engine.setPanel('PHONE')}
+              onToggleChat={() => engine.setPanel('CHAT')}
               onToggleMute={() => engine.toggleMute()}
               onTogglePause={() => engine.togglePause()}
               onQuickSlotClick={(idx) => engine.useOrEquipBackpackSlot(idx)}
@@ -87,6 +89,14 @@ export default function App() {
               onReplayBroadcast={(broadcastId) => engine.playRadioBroadcast(broadcastId)}
               onStopBroadcast={() => engine.stopRadioBroadcast()}
               onClearUnreadRadio={() => engine.clearUnreadRadio()}
+            />
+          )}
+
+          {snap.screen === 'PLAYING' && snap.panel === 'CHAT' && (
+            <ChatModal
+              snap={snap}
+              onClose={() => engine.setPanel('NONE')}
+              onSend={(text) => engine.sendChatMessage(text)}
             />
           )}
 
@@ -118,6 +128,7 @@ export default function App() {
               )
             }
             onTogglePhone={() => engine.setPanel('PHONE')}
+            onToggleChat={() => engine.setPanel('CHAT')}
             onQuickSlotClick={(idx) => engine.useOrEquipBackpackSlot(idx)}
             onInteract={() => engine.triggerInteract()}
           />

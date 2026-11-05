@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Backpack, Crosshair, Hand, RotateCw, Smartphone } from 'lucide-react';
+import { Backpack, Crosshair, Hand, MessageCircle, RotateCw, Smartphone } from 'lucide-react';
 import { ITEMS } from '../data/items';
 import { InputManager } from '../engine/input';
 import { countItemInBackpack } from '../systems/inventory';
@@ -12,6 +12,7 @@ interface MobileControlsProps {
   snap: UISnapshot;
   onToggleInventory: () => void;
   onTogglePhone: () => void;
+  onToggleChat: () => void;
   onQuickSlotClick: (slotIdx: number) => void;
   onInteract: () => void;
 }
@@ -21,6 +22,7 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
   snap,
   onToggleInventory,
   onTogglePhone,
+  onToggleChat,
   onQuickSlotClick,
   onInteract,
 }) => {
@@ -622,6 +624,26 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
                 </span>
               )}
             </button>
+
+            {snap.online.isOnlineMode && (
+              <button
+                type="button"
+                onPointerDown={(e) => {
+                  e.preventDefault();
+                  onToggleChat();
+                }}
+                className="relative min-w-[48px] min-h-[44px] px-2.5 rounded-xl border flex items-center justify-center gap-1 text-xs font-semibold active:scale-95 transition-transform bg-[#110c09]/92 text-[#d8c7b4] border-[#e4d4c6]/18"
+                aria-label="Open Squad Chat"
+              >
+                <MessageCircle className="w-4 h-4 shrink-0" />
+                <span className="hidden xs:inline">Chat</span>
+                {snap.online.unreadChatCount > 0 && (
+                  <span className="font-mono-num text-[#e26d27]">
+                    ({snap.online.unreadChatCount})
+                  </span>
+                )}
+              </button>
+            )}
 
             <button
               type="button"
