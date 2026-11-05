@@ -737,6 +737,7 @@ export class GameEngine {
     players: NetPlayerPayload[]
   ) {
     this.sound.ensureUnlocked();
+    this.sound.preloadHollowSamples();
     this.applyRoomLobbyPayload(lobby);
     this.isOnlineMatch = true;
     this.remoteSurvivors.clear();
@@ -1035,6 +1036,7 @@ export class GameEngine {
   };
 
   private initFreshRunState(worldOptions?: WorldBuildOptions) {
+    this.sound.preloadHollowSamples();
     this.world = buildCityWorld(worldOptions);
     this.milestones = buildHourlyMilestones(this.world.activeExtractionSite);
     this.campaignStage = 'ESCAPE_VILLAGE';

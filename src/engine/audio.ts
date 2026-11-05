@@ -52,6 +52,10 @@ export class SoundEngine {
   private activeVoiceGain: GainNode | null = null;
   private activeVoiceBoost = 1.0;
   private musicAudio: HTMLAudioElement | null = null;
+  private hollowBuffers: Record<string, AudioBuffer | null> = {};
+  private hollowBufferLoading: Record<string, boolean> = {};
+  private hollowLastPlay: Record<string, number> = {};
+  private hollowActive: AudioBufferSourceNode[] = [];
 
   private masterVal = 0.8;
   private musicVal = 0.7;
@@ -411,59 +415,8 @@ export class SoundEngine {
     sx: number,
     sy: number
   ) {
-    if (!this.ctx || !this.whiteNoiseBuffer || !this.noiseBuffer || this.muted) return;
-    const pos = this.getPositionalNodes(lx, ly, sx, sy, chasing ? 600 : 440, 1.15);
-    if (!pos) return;
-
-    const ctx = this.ctx;
-    const now = ctx.currentTime;
-    const scale = pos.gainScale * (chasing ? 0.36 : 0.2);
-    if (scale <= 0.002) return;
-
-    // Heavy organic footfall sub-thud
-    const osc = ctx.createOscillator();
-    osc.type = 'sine';
-    const baseHz = kind === 'bloom' ? 68 : kind === 'crawler' ? 92 : 78;
-    osc.frequency.setValueAtTime(baseHz * (0.92 + Math.random() * 0.16), now);
-    osc.frequency.exponentialRampToValueAtTime(26, now + 0.055);
-
-    const g = ctx.createGain();
-    g.gain.setValueAtTime(scale * (kind === 'bloom' ? 1.35 : 0.85), now);
-    g.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
-    osc.connect(g);
-    g.connect(pos.out);
-    osc.start(now);
-    osc.stop(now + 0.065);
-
-    // Wet claw click / dragging shoe scrape in the dark
-    const nSrc = ctx.createBufferSource();
-    nSrc.buffer = this.whiteNoiseBuffer;
-    const bp = ctx.createBiquadFilter();
-    bp.type = 'bandpass';
-    bp.frequency.value = kind === 'crawler' ? 2450 : kind === 'bloom' ? 820 : 1450;
-    bp.Q.value = 1.65;
-    const nDur = !chasing && (kind === 'still' || kind === 'mimic') ? 0.11 : 0.05;
-    const nG = ctx.createGain();
-    nG.gain.setValueAtTime(scale * 0.9, now);
-    nG.gain.exponentialRampToValueAtTime(0.001, now + nDur);
-    nSrc.connect(bp);
-    bp.connect(nG);
-    nG.connect(pos.out);
-    nSrc.start(now, Math.random() * 1.4, nDur + 0.015);
-
-    // Fang scrape: sharp high-frequency claw drag across stone/wood
-    const fang = ctx.createBufferSource();
-    fang.buffer = this.whiteNoiseBuffer;
-    const fBp = ctx.createBiquadFilter();
-    fBp.type = 'highpass';
-    fBp.frequency.value = kind === 'crawler' ? 3600 : kind === 'bloom' ? 1100 : 2600;
-    const fG = ctx.createGain();
-    fG.gain.setValueAtTime(scale * 0.55, now);
-    fG.gain.exponentialRampToValueAtTime(0.0008, now + 0.045);
-    fang.connect(fBp);
-    fBp.connect(fG);
-    fG.connect(pos.out);
-    fang.start(now, Math.random() * 0.6, 0.06);
+    // Suppressed: creatures now use recorded Hollow samples.
+    return;
   }
 
   public playEnemyRoar(
@@ -2429,99 +2382,20 @@ export class SoundEngine {
   }
 
   public playHorrorSpotSting(lx: number, ly: number, sx: number, sy: number) {
-    if (!this.ctx || !this.whiteNoiseBuffer || !this.noiseBuffer || this.muted) return;
-    const dist = Math.hypot(sx - lx, sy - ly);
-    if (dist > 540) return;
-
-    const ctx = this.ctx;
-    const now = ctx.currentTime;
-    if (now - this.lastHorrorStingTime < 5.5) return;
-    this.lastHorrorStingTime = now;
-
-    const proximity = Math.max(0.35, 1 - dist / 540);
-    const vol = this.masterVal * this.sfxVal * 0.62 * proximity;
-    if (vol <= 0.004) return;
-
-    // Briefly duck music so the jump-scare slams cleanly out of the dark
-    this.horrorDuckScale = 0.34;
-    this.syncMusicElement();
-    if (this.horrorDuckTimer !== null) {
-      window.clearTimeout(this.horrorDuckTimer);
-    }
-    this.horrorDuckTimer = window.setTimeout(() => {
-      this.horrorDuckScale = 1.0;
-      this.syncMusicElement();
-      this.horrorDuckTimer = null;
-    }, 900);
-
-    // 1. Violent sub-bass heart-drop slam
-    const sub = ctx.createOscillator();
-    sub.type = 'sine';
-    sub.frequency.setValueAtTime(88, now);
-    sub.frequency.exponentialRampToValueAtTime(23, now + 0.68);
-    const subShaper = ctx.createWaveShaper();
-    subShaper.curve = this.monsterDriveCurve;
-    const subLp = ctx.createBiquadFilter();
-    subLp.type = 'lowpass';
-    subLp.frequency.value = 140;
-    const subG = ctx.createGain();
-    subG.gain.setValueAtTime(vol * 0.95, now);
-    subG.gain.exponentialRampToValueAtTime(0.0008, now + 0.72);
-    sub.connect(subShaper);
-    subShaper.connect(subLp);
-    subLp.connect(subG);
-    subG.connect(ctx.destination);
-    sub.start(now);
-    sub.stop(now + 0.75);
-
-    // 2. Razor-sharp horror violin/waterphone screech cluster (minor 2nd + tritone)
-    for (const [fStart, fEnd] of [
-      [739.99, 698.46],
-      [783.99, 830.61],
-      [1108.73, 1215.0],
-    ]) {
-      const bow = ctx.createOscillator();
-      bow.type = 'sawtooth';
-      bow.frequency.setValueAtTime(fStart, now);
-      bow.frequency.exponentialRampToValueAtTime(fEnd, now + 0.54);
-      const bp = ctx.createBiquadFilter();
-      bp.type = 'bandpass';
-      bp.frequency.setValueAtTime(2400, now);
-      bp.frequency.exponentialRampToValueAtTime(1150, now + 0.54);
-      bp.Q.value = 3.2;
-      const bG = ctx.createGain();
-      bG.gain.setValueAtTime(0.001, now);
-      bG.gain.linearRampToValueAtTime(vol * 0.28, now + 0.018);
-      bG.gain.exponentialRampToValueAtTime(0.0008, now + 0.56);
-      bow.connect(bp);
-      bp.connect(bG);
-      bG.connect(ctx.destination);
-      bow.start(now);
-      bow.stop(now + 0.58);
-    }
-
-    // 3. Sharp metallic shock scrape burst
-    const shock = ctx.createBufferSource();
-    shock.buffer = this.whiteNoiseBuffer;
-    const sBp = ctx.createBiquadFilter();
-    sBp.type = 'bandpass';
-    sBp.frequency.setValueAtTime(3400, now);
-    sBp.frequency.exponentialRampToValueAtTime(980, now + 0.28);
-    sBp.Q.value = 2.4;
-    const sG = ctx.createGain();
-    sG.gain.setValueAtTime(vol * 0.55, now);
-    sG.gain.exponentialRampToValueAtTime(0.0008, now + 0.3);
-    shock.connect(sBp);
-    sBp.connect(sG);
-    sG.connect(ctx.destination);
-    shock.start(now, Math.random(), 0.32);
+    // Suppressed: creatures now use recorded Hollow samples.
+    return;
   }
 
-  // Cached Hollow sample buffers (loaded lazily)
-  private hollowBuffers: Record<string, AudioBuffer | null> = {};
-  private hollowBufferLoading: Record<string, boolean> = {};
-  private hollowLastPlay: Record<string, number> = {};
-  private hollowActive: AudioBufferSourceNode[] = [];
+  public preloadHollowSamples() {
+    for (const name of [
+      'Hollow idle arround.mp3',
+      'Hollow  far.mp3',
+      'Hollow  Bites.mp3',
+      'Hollow attacks.mp3',
+    ]) {
+      void this.loadHollowBuffer(name);
+    }
+  }
 
   private hollowSampleForCue(cue: string): string {
     if (cue === 'attack') return 'Hollow attacks.mp3';
