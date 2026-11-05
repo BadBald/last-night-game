@@ -53,9 +53,13 @@ export class SoundEngine {
   private activeVoiceBoost = 1.0;
   private musicAudio: HTMLAudioElement | null = null;
   private hollowBuffers: Record<string, AudioBuffer | null> = {};
-  private hollowBufferLoading: Record<string, boolean> = {};
+  private hollowLoads: Record<string, Promise<AudioBuffer | null>> = {};
   private hollowLastPlay: Record<string, number> = {};
   private hollowActive: AudioBufferSourceNode[] = [];
+  private breathGain: GainNode | null = null;
+  private breathLfo: OscillatorNode | null = null;
+  private breathExertion = 0.12;
+  private nightGain: GainNode | null = null;
 
   private masterVal = 0.8;
   private musicVal = 0.7;
@@ -141,6 +145,8 @@ export class SoundEngine {
       this.ctx = new AudioCtx();
       this.createNoiseBuffer();
       this.setupRainAmbience();
+      this.setupPlayerBreath();
+      this.setupNightAmbience();
       this.setupHelicopterRotor();
       this.setupRadioCarrier();
     }
@@ -194,6 +200,131 @@ export class SoundEngine {
 
     this.rainFilter = filter;
     this.rainGain = gain;
+  }
+
+  private setupPlayerBreath() {
+    if (!this.ctx || !this.noiseBuffer || this.breathGain) return;
+    const ctx = this.ctx;
+    const src = ctx.createBufferSource();
+    src.buffer = this.noiseBuffer;
+    src.loop = true;
+
+    const hp = ctx.createBiquadFilter();
+    hp.type = 'highpass';
+    hp.frequency.value = 170;
+    const lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 880;
+    lp.Q.value = 0.7;
+
+    // Slow inhale / exhale swell (~4.2 s per breath).
+    const env = ctx.createGain();
+    env.gain.value = 0.45;
+    const lfo = ctx.createOscillator();
+    lfo.type = 'sine';
+    lfo.frequency.value = 0.24;
+    const lfoDepth = ctx.createGain();
+    lfoDepth.gain.value = 0.45;
+    lfo.connect(lfoDepth);
+    lfoDepth.connect(env.gain);
+
+    const out = ctx.createGain();
+    out.gain.value = 0;
+
+    src.connect(hp);
+    hp.connect(lp);
+    lp.connect(env);
+    env.connect(out);
+    out.connect(ctx.destination);
+
+    src.start();
+    lfo.start();
+    this.breathGain = out;
+    this.breathLfo = lfo;
+  }
+
+  public setPlayerExertion(level: number) {
+    const next = Math.max(0, Math.min(1, level));
+    if (Math.abs(next - this.breathExertion) < 0.08) return;
+    this.breathExertion = next;
+    this.syncContinuousNodes();
+  }
+
+  private setupNightAmbience() {
+    if (!this.ctx || !this.noiseBuffer || this.nightGain) return;
+    const ctx = this.ctx;
+    const bus = ctx.createGain();
+    bus.gain.value = 0;
+    bus.connect(ctx.destination);
+
+    // Low wind bed drifting through the streets.
+    const wind = ctx.createBufferSource();
+    wind.buffer = this.noiseBuffer;
+    wind.loop = true;
+    const windLp = ctx.createBiquadFilter();
+    windLp.type = 'lowpass';
+    windLp.frequency.value = 310;
+    windLp.Q.value = 0.4;
+    const windGain = ctx.createGain();
+    windGain.gain.value = 0.5;
+    const windLfo = ctx.createOscillator();
+    windLfo.type = 'sine';
+    windLfo.frequency.value = 0.07;
+    const windLfoDepth = ctx.createGain();
+    windLfoDepth.gain.value = 0.24;
+    windLfo.connect(windLfoDepth);
+    windLfoDepth.connect(windGain.gain);
+    wind.connect(windLp);
+    windLp.connect(windGain);
+    windGain.connect(bus);
+    wind.start();
+    windLfo.start();
+
+    // Distant crickets: tiny high tones with a fast tremolo chirp, drifting in
+    // and out on a slow fade so they never become a constant hum.
+    for (const [freq, rate, drift] of [
+      [4180, 6.4, 0.0],
+      [4620, 5.1, 0.5],
+      [5150, 7.3, 1.0],
+    ] as const) {
+      const osc = ctx.createOscillator();
+      osc.type = 'triangle';
+      osc.frequency.value = freq;
+      const tone = ctx.createBiquadFilter();
+      tone.type = 'bandpass';
+      tone.frequency.value = freq;
+      tone.Q.value = 12;
+
+      const chirp = ctx.createGain();
+      chirp.gain.value = 0;
+      const trem = ctx.createOscillator();
+      trem.type = 'sine';
+      trem.frequency.value = rate;
+      const tremDepth = ctx.createGain();
+      tremDepth.gain.value = 0.26;
+      trem.connect(tremDepth);
+      tremDepth.connect(chirp.gain);
+
+      const fade = ctx.createGain();
+      fade.gain.value = 0.5;
+      const slow = ctx.createOscillator();
+      slow.type = 'sine';
+      slow.frequency.value = 0.1 + drift * 0.035;
+      const slowDepth = ctx.createGain();
+      slowDepth.gain.value = 0.5;
+      slow.connect(slowDepth);
+      slowDepth.connect(fade.gain);
+
+      osc.connect(tone);
+      tone.connect(chirp);
+      chirp.connect(fade);
+      fade.connect(bus);
+      osc.start();
+      trem.start();
+      slow.start();
+    }
+
+    this.nightGain = bus;
   }
 
   private setupHelicopterRotor() {
@@ -312,6 +443,13 @@ export class SoundEngine {
         0.04
       );
     }
+    if (this.breathGain) {
+      const targetBreath = effAmb * (0.006 + this.breathExertion * 0.05);
+      this.breathGain.gain.setTargetAtTime(targetBreath, now, 0.7);
+    }
+    if (this.nightGain) {
+      this.nightGain.gain.setTargetAtTime(effAmb * 0.035, now, 1.0);
+    }
   }
 
   private getPositionalNodes(
@@ -415,8 +553,59 @@ export class SoundEngine {
     sx: number,
     sy: number
   ) {
-    // Suppressed: creatures now use recorded Hollow samples.
-    return;
+    if (!this.ctx || !this.whiteNoiseBuffer || !this.noiseBuffer || this.muted) return;
+    const pos = this.getPositionalNodes(lx, ly, sx, sy, chasing ? 600 : 440, 1.15);
+    if (!pos) return;
+
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+    const scale = pos.gainScale * (chasing ? 0.36 : 0.2);
+    if (scale <= 0.002) return;
+
+    // Heavy organic footfall sub-thud
+    const osc = ctx.createOscillator();
+    osc.type = 'sine';
+    const baseHz = kind === 'bloom' ? 68 : kind === 'crawler' ? 92 : 78;
+    osc.frequency.setValueAtTime(baseHz * (0.92 + Math.random() * 0.16), now);
+    osc.frequency.exponentialRampToValueAtTime(26, now + 0.055);
+
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(scale * (kind === 'bloom' ? 1.35 : 0.85), now);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+    osc.connect(g);
+    g.connect(pos.out);
+    osc.start(now);
+    osc.stop(now + 0.065);
+
+    // Wet claw click / dragging shoe scrape in the dark
+    const nSrc = ctx.createBufferSource();
+    nSrc.buffer = this.whiteNoiseBuffer;
+    const bp = ctx.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.value = kind === 'crawler' ? 2450 : kind === 'bloom' ? 820 : 1450;
+    bp.Q.value = 1.65;
+    const nDur = !chasing && (kind === 'still' || kind === 'mimic') ? 0.11 : 0.05;
+    const nG = ctx.createGain();
+    nG.gain.setValueAtTime(scale * 0.9, now);
+    nG.gain.exponentialRampToValueAtTime(0.001, now + nDur);
+    nSrc.connect(bp);
+    bp.connect(nG);
+    nG.connect(pos.out);
+    nSrc.start(now, Math.random() * 1.4, nDur + 0.015);
+
+    // Fang scrape: sharp high-frequency claw drag across stone/wood
+    const fang = ctx.createBufferSource();
+    fang.buffer = this.whiteNoiseBuffer;
+    const fBp = ctx.createBiquadFilter();
+    fBp.type = 'highpass';
+    fBp.frequency.value = kind === 'crawler' ? 3600 : kind === 'bloom' ? 1100 : 2600;
+    const fG = ctx.createGain();
+    fG.gain.setValueAtTime(scale * 0.55, now);
+    fG.gain.exponentialRampToValueAtTime(0.0008, now + 0.045);
+    fang.connect(fBp);
+    fBp.connect(fG);
+    fG.connect(pos.out);
+    fang.start(now, Math.random() * 0.6, 0.06);
   }
 
   public playEnemyRoar(
@@ -427,8 +616,13 @@ export class SoundEngine {
     sy: number
   ) {
     // All creatures use recorded Hollow samples instead of procedural roar.
+    this.ensureUnlocked();
+    if (this.ctx) {
+      // Do not stack a second roar on top of a just-played spot cue.
+      const spotAt = this.hollowLastPlay[`${kind}:spot`] ?? -100;
+      if (this.ctx.currentTime - spotAt < 1.4) return;
+    }
     this.playEnemyVocal(kind, lx, ly, sx, sy, 'chase');
-    return;
   }
 
   public playGunshot(kind: 'pistol' | 'revolver' | 'shotgun') {
@@ -2397,31 +2591,50 @@ export class SoundEngine {
     }
   }
 
-  private hollowSampleForCue(cue: string): string {
+  private hollowSampleForCue(cue: string, dist: number): string {
     if (cue === 'attack') return 'Hollow attacks.mp3';
+    if (cue === 'bite') return 'Hollow  Bites.mp3';
     if (cue === 'hurt' || cue === 'death') return 'Hollow  Bites.mp3';
-    if (cue === 'chase' || cue === 'spot') return 'Hollow  far.mp3';
+    if (cue === 'flee') return 'Hollow  far.mp3';
+    if (cue === 'chase' || cue === 'spot') {
+      // Distant creature or one drifting away -> the far sample; close -> snarls.
+      return dist > 460 ? 'Hollow  far.mp3' : 'Hollow attacks.mp3';
+    }
     return 'Hollow idle arround.mp3';
   }
 
-  private async loadHollowBuffer(name: string) {
-    if (this.hollowBuffers[name]) return this.hollowBuffers[name];
-    if (this.hollowBufferLoading[name]) return null;
-    this.hollowBufferLoading[name] = true;
-    try {
-      this.ensureUnlocked();
-      if (!this.ctx) return null;
-      const resp = await fetch('/assets/hollow%20audio/' + encodeURIComponent(name).replace(/%20/g, '%20'));
-      if (!resp.ok) { this.hollowBufferLoading[name]=false; return null; }
-      const ab = await resp.arrayBuffer();
-      const buf = await this.ctx.decodeAudioData(ab.slice(0));
-      this.hollowBuffers[name] = buf;
-      this.hollowBufferLoading[name] = false;
-      return buf;
-    } catch {
-      this.hollowBufferLoading[name] = false;
-      return null;
-    }
+  private loadHollowBuffer(name: string): Promise<AudioBuffer | null> {
+    const cached = this.hollowBuffers[name];
+    if (cached) return Promise.resolve(cached);
+    const pending = this.hollowLoads[name];
+    if (pending) return pending;
+
+    this.ensureUnlocked();
+    const ctx = this.ctx;
+    if (!ctx) return Promise.resolve(null);
+
+    const task = (async () => {
+      try {
+        const resp = await fetch('/assets/hollow%20audio/' + encodeURIComponent(name), {
+          cache: 'force-cache',
+        });
+        if (!resp.ok) return null;
+        const type = resp.headers.get('content-type') ?? '';
+        // Firebase rewrites missing files to index.html; never decode HTML as audio.
+        if (!type.startsWith('audio/')) return null;
+        const data = await resp.arrayBuffer();
+        const buf = await ctx.decodeAudioData(data.slice(0));
+        this.hollowBuffers[name] = buf;
+        return buf;
+      } catch {
+        return null;
+      } finally {
+        delete this.hollowLoads[name];
+      }
+    })();
+
+    this.hollowLoads[name] = task;
+    return task;
   }
 
   public playEnemyVocal(
@@ -2430,67 +2643,94 @@ export class SoundEngine {
     ly: number,
     sx: number,
     sy: number,
-    cue: 'spot' | 'ambient' | 'chase' | 'attack' | 'hurt' | 'death' = 'spot'
+    cue: 'spot' | 'ambient' | 'chase' | 'attack' | 'bite' | 'flee' | 'hurt' | 'death' = 'spot'
   ) {
-    // Use recorded Hollow samples for all creatures (replaces procedural vocals).
     this.ensureUnlocked();
     if (!this.ctx || this.muted) return;
-    // Cooldowns to avoid spam / cutting
-    const now = this.ctx.currentTime;
-    const cueKey = cue;
-    const cooldown =
-      cue === 'attack' ? 0.35 :
-      cue === 'hurt' ? 0.28 :
-      cue === 'death' ? 0.5 :
-      cue === 'chase' ? 1.6 :
-      cue === 'spot' ? 1.2 :
-      2.4;
-    const last = this.hollowLastPlay[cueKey] || -10;
-    if (now - last < cooldown) return;
-    this.hollowLastPlay[cueKey] = now;
 
-    const sampleName = this.hollowSampleForCue(cue);
-    const pos = this.getPositionalNodes(lx, ly, sx, sy, cue === 'ambient' ? 760 : 920, 1.1);
+    // One cooldown lane per creature + cue so a nearby monster cannot silence another.
+    const now = this.ctx.currentTime;
+    const lane = `${kind}:${cue}`;
+    const cooldown =
+      cue === 'attack' ? 0.45 :
+      cue === 'bite' ? 0.22 :
+      cue === 'hurt' ? 0.3 :
+      cue === 'death' ? 0.6 :
+      cue === 'flee' ? 1.8 :
+      cue === 'chase' ? 2.2 :
+      cue === 'spot' ? 1.6 :
+      6.5;
+    if (now - (this.hollowLastPlay[lane] ?? -100) < cooldown) return;
+    this.hollowLastPlay[lane] = now;
+
+    const maxDist = cue === 'ambient' ? 820 : cue === 'bite' ? 720 : 1000;
+    const pos = this.getPositionalNodes(lx, ly, sx, sy, maxDist, 1.08);
     if (!pos) return;
+    const sampleName = this.hollowSampleForCue(cue, pos.dist);
+
+    const gainMul =
+      cue === 'attack' ? 1.0 :
+      cue === 'bite' ? 1.0 :
+      cue === 'death' ? 1.0 :
+      cue === 'hurt' ? 0.9 :
+      cue === 'chase' || cue === 'spot' ? 0.85 :
+      0.45;
 
     const playBuffer = (buf: AudioBuffer) => {
-      if (!this.ctx) return;
       const ctx = this.ctx;
+      if (!ctx) return;
+      if (this.hollowActive.length >= 10) return; // mix cap
+
       const t0 = ctx.currentTime;
-      if (this.hollowActive.length > 6) return; // mix cap
+      // Pick a window inside long samples instead of hard-cutting the file.
+      const isBed = cue === 'ambient';
+      const isFar = cue === 'chase' || cue === 'spot' || cue === 'flee';
+      let offset = 0;
+      let dur = buf.duration;
+      if (isBed) {
+        dur = Math.min(buf.duration, 7.5 + Math.random() * 2.5);
+        offset = Math.random() * Math.max(0, buf.duration - dur);
+      } else if (isFar) {
+        dur = Math.min(buf.duration, 2.8 + Math.random() * 1.4);
+        offset = Math.random() * Math.max(0, buf.duration - dur);
+      }
 
       const src = ctx.createBufferSource();
       src.buffer = buf;
-      // Slight pitch variance for organic feel
-      src.playbackRate.value = 0.96 + Math.random() * 0.08;
+      // Slight pitch variance for an organic, never-identical delivery.
+      src.playbackRate.value = 0.94 + Math.random() * 0.12;
+
+      const hp = ctx.createBiquadFilter();
+      hp.type = 'highpass';
+      hp.frequency.value = 42;
+      const lp = ctx.createBiquadFilter();
+      lp.type = 'lowpass';
+      lp.frequency.value = isBed || isFar ? 5200 : 9000;
 
       const g = ctx.createGain();
-      // Attack ramp (no hard cut-in), sustain, release fade
-      const attack = cue === 'attack' ? 0.012 : 0.06;
-      const dur = Math.min(buf.duration, cue === 'ambient' ? 4.0 : buf.duration);
+      const peak = Math.max(0.0002, pos.gainScale * gainMul);
+      const attack = cue === 'attack' || cue === 'bite' ? 0.012 : isBed ? 0.9 : 0.05;
+      const release = isBed ? 1.1 : 0.18;
+      const fadeStart = Math.max(t0 + attack + 0.02, t0 + dur - release);
       g.gain.setValueAtTime(0.0001, t0);
-      g.gain.exponentialRampToValueAtTime(pos.gainScale * 0.85, t0 + attack);
-      if (cue !== 'ambient') {
-        g.gain.exponentialRampToValueAtTime(0.0008, t0 + dur);
-      }
+      g.gain.exponentialRampToValueAtTime(peak, t0 + attack);
+      g.gain.setValueAtTime(peak, fadeStart);
+      g.gain.exponentialRampToValueAtTime(0.0008, t0 + dur);
 
-      // Monster vocal tract coloration (bandpass)
-      const bp = ctx.createBiquadFilter();
-      bp.type = 'bandpass';
-      bp.frequency.value = cue === 'attack' ? 620 : cue === 'hurt' ? 780 : 420;
-      bp.Q.value = 1.6;
-
-      src.connect(bp);
-      bp.connect(g);
+      src.connect(hp);
+      hp.connect(lp);
+      lp.connect(g);
       g.connect(pos.out);
 
-      src.start(t0);
-      if (cue !== 'ambient') {
-        src.stop(t0 + dur + 0.05);
-      }
+      src.start(t0, offset, dur + 0.02);
       this.hollowActive.push(src);
       src.onended = () => {
-        try { src.disconnect(); bp.disconnect(); g.disconnect(); } catch {}
+        try {
+          src.disconnect();
+          hp.disconnect();
+          lp.disconnect();
+          g.disconnect();
+        } catch {}
         this.hollowActive = this.hollowActive.filter((x) => x !== src);
       };
     };
@@ -2499,10 +2739,20 @@ export class SoundEngine {
     if (cached) {
       playBuffer(cached);
     } else {
-      this.loadHollowBuffer(sampleName).then((buf) => {
+      void this.loadHollowBuffer(sampleName).then((buf) => {
         if (buf) playBuffer(buf);
       });
     }
+  }
+
+  public playEnemyBite(
+    kind: 'crawler' | 'still' | 'bloom' | 'mimic',
+    lx: number,
+    ly: number,
+    sx: number,
+    sy: number
+  ) {
+    this.playEnemyVocal(kind, lx, ly, sx, sy, 'bite');
   }
 
   public playEnemyVocalProcedural(

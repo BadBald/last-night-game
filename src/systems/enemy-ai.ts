@@ -271,6 +271,7 @@ export function updateEnemiesAI(
           }
         } else {
           // Lost line of sight -> investigate last known position!
+          sound.playEnemyVocal(e.enemyClass, player.x, player.y, e.x, e.y, 'flee');
           e.state = 'SEARCH';
           e.stateTimer = 7.5;
         }
@@ -288,6 +289,7 @@ export function updateEnemiesAI(
             distToPlayer <= arch.attackRange + player.radius + 14 &&
             hasLineOfSight(world, e.x, e.y, player.x, player.y)
           ) {
+            sound.playEnemyBite(e.enemyClass, player.x, player.y, e.x, e.y);
             cb.onPlayerDamaged(
               arch.attackDamage,
               arch.bleedChance,

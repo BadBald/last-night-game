@@ -2146,6 +2146,11 @@ export class GameEngine {
     p.isCrouching = crouchHeld;
     p.isSprinting = sprintHeld;
 
+    // Quiet adaptive breathing: calm at rest, heavier while sprinting or winded.
+    this.sound.setPlayerExertion(
+      p.isSprinting ? 1 : p.conditions.exhausted ? 0.85 : p.stamina < 45 ? 0.6 : 0.12
+    );
+
     const curWeight = calculateBackpackWeight(this.backpack, p.armorEquipped);
     const encumberedFactor = curWeight > CONFIG.ENCUMBERED_THRESHOLD_KG ? 0.84 : 1.0;
 
@@ -3044,7 +3049,11 @@ export class GameEngine {
     this.player.hurtFlash = 0.24;
     this.runStats.damageTaken += dmg;
 
-    this.sound.playPlayerHurt();
+    // Creature mauls use the recorded Hollow bite sample (played from the
+    // attacker in enemy-ai), so skip the old procedural player-hurt layer.
+    if (!deathMessage.startsWith('Mauled by')) {
+      this.sound.playPlayerHurt();
+    }
     this.cam.addShake(6.5, this.settings.screenShake);
     this.input.vibrate(230, 0.75, 0.95, this.settings.controllerVibration);
     this.spawnParticles(this.player.x, this.player.y, 12, '#dc2626', 130, 0.42);
