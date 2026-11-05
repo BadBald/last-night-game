@@ -56,6 +56,7 @@ export const PhoneModal: React.FC<PhoneModalProps> = ({
   const padActive = snap.isGamepadActive;
   const feedScrollRef = useRef<HTMLDivElement | null>(null);
   const msgRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const chatScrollRef = useRef<HTMLDivElement | null>(null);
 
   const [activeTab, setActiveTab] = useState<PhoneAppTab>(() =>
     snap.unreadRadioCount > 0 || Boolean(snap.activeRadioBroadcast) ? 'radio' : 'maps'
@@ -75,6 +76,12 @@ export const PhoneModal: React.FC<PhoneModalProps> = ({
       onClearUnreadChat();
     }
   }, [activeTab, snap.unreadRadioCount, snap.online.unreadChatCount, onClearUnreadRadio, onClearUnreadChat]);
+
+  useEffect(() => {
+    if (chatScrollRef.current) {
+      chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+    }
+  }, [snap.online.chatMessages.length, activeTab]);
 
   // Gamepad navigation inside Survivor Phone
   useEffect(() => {
@@ -906,10 +913,6 @@ export const PhoneModal: React.FC<PhoneModalProps> = ({
   );
 
   const renderChatApp = () => {
-    const scrollRef = useRef<HTMLDivElement | null>(null);
-    useEffect(() => {
-      if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }, [snap.online.chatMessages.length]);
     const handleSend = (e: React.KeyboardEvent<HTMLInputElement>) => {
       if (e.key === 'Enter') {
         const t = (e.target as HTMLInputElement).value.trim();
@@ -930,7 +933,7 @@ export const PhoneModal: React.FC<PhoneModalProps> = ({
             {isTalking ? 'Talking' : 'Hold to Talk'}
           </button>
         </div>
-        <div ref={scrollRef} className="max-h-[220px] overflow-y-auto scroll-touch space-y-1.5 pr-1">
+        <div ref={chatScrollRef} className="max-h-[220px] overflow-y-auto scroll-touch space-y-1.5 pr-1">
           {snap.online.chatMessages.length === 0 && (
             <p className="text-xs text-[#9c8b79] text-center mt-6">No messages yet.</p>
           )}

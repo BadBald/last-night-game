@@ -1833,6 +1833,7 @@ export class GameEngine {
         if (wantTalk !== this.isTalking) {
           this.isTalking = wantTalk;
           this.voiceChat.setTalking(wantTalk);
+          this.emitSnapshot();
         }
       }
     }
