@@ -246,6 +246,12 @@ export class MultiplayerClient {
           this.handleBinaryMessage(ev.data);
           return;
         }
+        if (ev.data instanceof Blob) {
+          void ev.data.arrayBuffer().then((buf) => {
+            if (!this.destroyed) this.handleBinaryMessage(buf);
+          });
+          return;
+        }
         let data: Record<string, unknown>;
         try {
           data = JSON.parse(String(ev.data)) as Record<string, unknown>;

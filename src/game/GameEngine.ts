@@ -815,7 +815,7 @@ export class GameEngine {
       }
     }
 
-    // Voice chat setup (push-to-talk, proximity gain)
+    // Voice chat setup (toggle-to-talk, proximity gain, relayed over the game socket)
     this.voiceChat = new VoiceChatManager({
       sendSignal: (data) => {
         this.mp.send({ type: 'voice:signal', targetId: data.targetId, kind: data.kind, payload: data.payload });

@@ -318,7 +318,11 @@ function relayVoiceFrame(clientId: string, buf: Buffer) {
     if (Math.hypot(target.x - player.x, target.y - player.y) > VOICE_RELAY_RANGE) {
       continue;
     }
-    target.ws.send(out, { binary: true });
+    try {
+      target.ws.send(out, { binary: true });
+    } catch {
+      /* socket closed between the readyState check and the send */
+    }
   }
 }
 
@@ -721,7 +725,7 @@ async function startServer() {
   app.use(express.json());
 
   app.get('/api/health', (_req, res) => {
-    res.json({ status: 'ok', activeRooms: rooms.size });
+    res.json({ status: 'ok', activeRooms: rooms.size, voiceRelay: 'ws-pcm-v1' });
   });
 
   app.get('/api/lobbies', (_req, res) => {
