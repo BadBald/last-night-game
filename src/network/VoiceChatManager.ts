@@ -35,6 +35,7 @@ export interface VoiceChatCallbacks {
   getSelfId: () => string | null;
   getRemoteIds: () => string[];
   getDistance: (remoteId: string) => number; // world units
+  getMasterVolume: () => number;
 }
 
 const TARGET_SAMPLE_RATE = 16000;
@@ -216,7 +217,7 @@ export class VoiceChatManager {
     let state = this.playback.get(fromId);
     if (!state) {
       const gain = ctx.createGain();
-      gain.gain.value = this.computeGain(this.callbacks.getDistance(fromId));
+      gain.gain.value = this.effectiveGain(this.callbacks.getDistance(fromId));
       gain.connect(ctx.destination);
       state = { gain, nextTime: now + JITTER_BUFFER_SECONDS, lastPacketAt: now };
       this.playback.set(fromId, state);
@@ -231,7 +232,7 @@ export class VoiceChatManager {
     source.buffer = buffer;
     source.connect(state.gain);
 
-    const targetGain = this.computeGain(this.callbacks.getDistance(fromId));
+    const targetGain = this.effectiveGain(this.callbacks.getDistance(fromId));
     try {
       state.gain.gain.setTargetAtTime(targetGain, now, 0.06);
     } catch {
@@ -260,7 +261,7 @@ export class VoiceChatManager {
     }
     const now = ctx.currentTime;
     for (const [id, state] of this.playback) {
-      const targetGain = this.computeGain(this.callbacks.getDistance(id));
+      const targetGain = this.effectiveGain(this.callbacks.getDistance(id));
       try {
         state.gain.gain.setTargetAtTime(targetGain, now, 0.08);
       } catch {
@@ -276,6 +277,11 @@ export class VoiceChatManager {
         this.playback.delete(id);
       }
     }
+  }
+
+  private effectiveGain(dist: number): number {
+    const master = Math.max(0, Math.min(1, this.callbacks.getMasterVolume()));
+    return this.computeGain(dist) * master;
   }
 
   private computeGain(dist: number): number {
@@ -354,6 +360,18 @@ function downsampleBuffer(
   outRate: number
 ): Float32Array {
   if (inRate === outRate) return input.slice();
+  if (outRate > inRate) {
+    const outLength = Math.max(1, Math.floor((input.length * outRate) / inRate));
+    const out = new Float32Array(outLength);
+    for (let i = 0; i < outLength; i++) {
+      const pos = (i * inRate) / outRate;
+      const i0 = Math.floor(pos);
+      const i1 = Math.min(input.length - 1, i0 + 1);
+      const frac = pos - i0;
+      out[i] = input[i0] * (1 - frac) + input[i1] * frac;
+    }
+    return out;
+  }
   const ratio = inRate / outRate;
   const outLength = Math.max(1, Math.floor(input.length / ratio));
   const out = new Float32Array(outLength);

@@ -833,17 +833,11 @@ export class GameEngine {
         if (!rs) return 99999;
         return Math.hypot(rs.x - this.player.x, rs.y - this.player.y);
       },
+      getMasterVolume: () => (this.settings.muted ? 0 : this.settings.masterVolume),
     });
-    // Acquire the mic first, then build the mesh with the real track. If the
-    // player denies the prompt, peers still get created with a silent
-    // placeholder so they can hear everyone else.
-    void this.voiceChat.enable().then(() => {
-      for (const np of players) {
-        if (np.id !== this.selfId) {
-          this.voiceChat?.ensurePeer(np.id);
-        }
-      }
-    });
+    // Acquire the mic up front. If the player denies the prompt, voice capture
+    // stays off but they still hear everyone else through the relay.
+    void this.voiceChat.enable();
 
     for (const np of players) {
       if (np.id !== this.selfId) {

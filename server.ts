@@ -279,7 +279,7 @@ const socketsById = new Map<string, WebSocket>();
 // peer-to-peer WebRTC connection cannot be established.
 const VOICE_RELAY_MAX_BYTES = 4096;
 const VOICE_RELAY_RANGE = 2000; // world units; the client applies the fade
-const VOICE_RELAY_MAX_FPS = 80;
+const VOICE_RELAY_MAX_FPS = 120;
 const voiceRate = new Map<string, { windowStart: number; count: number }>();
 
 function relayVoiceFrame(clientId: string, buf: Buffer) {
