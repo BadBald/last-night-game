@@ -1,7 +1,18 @@
-// Proximity voice chat over WebRTC mesh, signaling via the game WebSocket.
+// Proximity voice chat over a WebRTC mesh, signaling via the game WebSocket.
 // Voice is toggle-to-talk: the caller flips setTalking(true/false) from the
-// in-game mic button, the T key, or the phone. Gain is adjusted per peer from
-// in-world distance (proximity fade).
+// in-game mic button, the T key, or the phone. Proximity fade is applied to the
+// playback volume of each remote peer.
+//
+// Notes on reliability:
+// - Every peer always negotiates a sendable audio m-line. Before the mic is
+//   granted we attach a silent placeholder track, then swap in the real mic
+//   with replaceTrack(). That avoids needing a renegotiation (which is what
+//   used to leave mobile players silent).
+// - A TURN relay is configured because mobile carriers are frequently behind
+//   symmetric NAT/CGNAT, where STUN-only peer connections never connect.
+// - Remote audio is played through <audio> elements (not a Web Audio graph) so
+//   it routes correctly on iOS/Android, where Web Audio output can stay silent
+//   until a gesture and is often suspended in the background.
 
 export interface VoiceSignalData {
   fromId: string;
@@ -27,8 +38,19 @@ const FULL_RANGE = 150;
 
 const RTC_CONFIG: RTCConfiguration = {
   iceServers: [
-    { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] },
+    { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302', 'stun:stun.cloudflare.com:3478'] },
+    {
+      urls: [
+        'turn:openrelay.metered.ca:80',
+        'turn:openrelay.metered.ca:80?transport=tcp',
+        'turn:openrelay.metered.ca:443',
+        'turn:openrelay.metered.ca:443?transport=tcp',
+      ],
+      username: 'openrelayproject',
+      credential: 'openrelayproject',
+    },
   ],
+  iceCandidatePoolSize: 4,
 };
 
 export class VoiceChatManager {
@@ -37,8 +59,9 @@ export class VoiceChatManager {
   private peers = new Map<string, RTCPeerConnection>();
   private transceivers = new Map<string, RTCRtpTransceiver>();
   private pendingIce = new Map<string, RTCIceCandidateInit[]>();
-  private remoteAudio = new Map<string, { gain: GainNode; ctx: AudioContext }>();
+  private remoteAudio = new Map<string, HTMLAudioElement>();
   private audioCtx: AudioContext | null = null;
+  private placeholderStream: MediaStream | null = null;
   private talking = false;
   private enabled = false;
   private talkingState = new Map<string, boolean>();
@@ -71,7 +94,8 @@ export class VoiceChatManager {
       this.applyTrackState();
       this.enabled = true;
       // Peers may already exist (created by the offer/answer exchange before
-      // mic permission finished). Attach our microphone to every one of them.
+      // mic permission finished). Swap the silent placeholder for the real
+      // microphone on every one of them.
       for (const [remoteId, pc] of this.peers) {
         this.attachLocalTrack(remoteId, pc);
       }
@@ -92,13 +116,14 @@ export class VoiceChatManager {
     this.peers.clear();
     this.transceivers.clear();
     this.pendingIce.clear();
-    this.remoteAudio.clear();
+    this.clearRemoteAudio();
     try {
       void this.audioCtx?.close();
     } catch {
       /* ignore */
     }
     this.audioCtx = null;
+    this.placeholderStream = null;
   }
 
   public ensurePeer(remoteId: string) {
@@ -106,9 +131,10 @@ export class VoiceChatManager {
     const selfId = this.callbacks.getSelfId();
     if (!selfId || remoteId === selfId) return null;
     const pc = new RTCPeerConnection(RTC_CONFIG);
-    const track = this.localStream?.getAudioTracks()[0] ?? null;
-    // Always negotiate an audio m-line, even before the mic is granted. Without
-    // this the offer has no audio section and neither side can hear the other.
+    const track = this.localStream?.getAudioTracks()[0] ?? this.ensurePlaceholderTrack();
+    // Always negotiate an audio m-line that is able to send. A silent
+    // placeholder track keeps the m-line sendrecv until the real mic arrives,
+    // so replaceTrack() alone is enough to start transmitting.
     const transceiver = track
       ? pc.addTransceiver(track, {
           direction: 'sendrecv',
@@ -130,20 +156,43 @@ export class VoiceChatManager {
         });
       }
     };
+    pc.oniceconnectionstatechange = () => {
+      console.info('[Voice] ICE', remoteId.slice(0, 6), pc.iceConnectionState);
+      if (pc.iceConnectionState === 'failed') {
+        try {
+          pc.restartIce();
+        } catch {
+          /* ignore */
+        }
+      }
+    };
+    pc.onconnectionstatechange = () => {
+      console.info('[Voice] PC', remoteId.slice(0, 6), pc.connectionState);
+      if (pc.connectionState === 'failed') {
+        try {
+          pc.restartIce();
+        } catch {
+          /* ignore */
+        }
+      }
+    };
     this.peers.set(remoteId, pc);
 
-    // Initiator: lower id creates offer
+    // Initiator: lower id creates the offer (avoids offer glare). Using
+    // onnegotiationneeded also lets us recover after a failed ICE connection.
     if (selfId < remoteId) {
-      pc.createOffer()
-        .then((offer) => pc.setLocalDescription(offer))
-        .then(() => {
-          this.callbacks.sendSignal({
-            targetId: remoteId,
-            kind: 'offer',
-            payload: pc.localDescription,
-          });
-        })
-        .catch((e) => console.warn('VoiceChat offer error', e));
+      pc.onnegotiationneeded = () => {
+        if (pc.signalingState !== 'stable') return;
+        pc.setLocalDescription()
+          .then(() => {
+            this.callbacks.sendSignal({
+              targetId: remoteId,
+              kind: 'offer',
+              payload: pc.localDescription,
+            });
+          })
+          .catch((e) => console.warn('VoiceChat offer error', e));
+      };
     }
     return pc;
   }
@@ -156,8 +205,8 @@ export class VoiceChatManager {
     }
     this.transceivers.delete(remoteId);
     this.pendingIce.delete(remoteId);
-    this.remoteAudio.delete(remoteId);
     this.talkingState.delete(remoteId);
+    this.removeRemoteAudio(remoteId);
   }
 
   public handleSignal(data: VoiceSignalData) {
@@ -228,14 +277,23 @@ export class VoiceChatManager {
     return this.talkingState.get(remoteId) || false;
   }
 
+  /**
+   * Must be called from a real user gesture. Browsers (especially mobile)
+   * block audio playback and keep AudioContexts suspended until then.
+   */
   public async resumeAudio() {
-    const ctx = this.audioCtx;
-    if (!ctx) return;
-    if (ctx.state === 'suspended') {
+    if (this.audioCtx?.state === 'suspended') {
       try {
-        await ctx.resume();
+        await this.audioCtx.resume();
       } catch {
         /* ignore */
+      }
+    }
+    for (const audio of this.remoteAudio.values()) {
+      try {
+        await audio.play();
+      } catch {
+        /* blocked until the next gesture; retried on every gesture */
       }
     }
   }
@@ -244,13 +302,18 @@ export class VoiceChatManager {
     if (this.audioCtx?.state === 'suspended') {
       void this.resumeAudio();
     }
-    for (const [id, entry] of this.remoteAudio) {
+    for (const [id, audio] of this.remoteAudio) {
       const dist = this.callbacks.getDistance(id);
       const gain = this.computeGain(dist);
+      if (audio.paused) {
+        void audio.play().catch(() => {
+          /* retried on the next gesture */
+        });
+      }
       try {
-        entry.gain.gain.setTargetAtTime(gain, entry.ctx.currentTime, 0.05);
+        audio.volume = gain;
       } catch {
-        entry.gain.gain.value = gain;
+        /* iOS may ignore volume; audio still plays */
       }
     }
   }
@@ -311,21 +374,59 @@ export class VoiceChatManager {
     return this.audioCtx;
   }
 
-  private attachRemoteAudio(remoteId: string, stream: MediaStream) {
-    if (this.remoteAudio.has(remoteId)) return;
-    const ctx = this.ensureAudioContext();
-    if (!ctx) return;
-    try {
-      const source = ctx.createMediaStreamSource(stream);
-      const gain = ctx.createGain();
-      // Start at the correct proximity gain so the first words are audible.
-      gain.gain.value = this.computeGain(this.callbacks.getDistance(remoteId));
-      source.connect(gain);
-      gain.connect(ctx.destination);
-      this.remoteAudio.set(remoteId, { gain, ctx });
-      void this.resumeAudio();
-    } catch (e) {
-      console.warn('VoiceChat attach audio error', e);
+  /**
+   * Silent audio track used to keep the negotiated m-line sendrecv before the
+   * player grants microphone access.
+   */
+  private ensurePlaceholderTrack(): MediaStreamTrack | null {
+    if (!this.placeholderStream) {
+      const ctx = this.ensureAudioContext();
+      if (!ctx) return null;
+      try {
+        const dest = ctx.createMediaStreamDestination();
+        this.placeholderStream = dest.stream;
+      } catch {
+        return null;
+      }
     }
+    return this.placeholderStream.getAudioTracks()[0] ?? null;
+  }
+
+  private attachRemoteAudio(remoteId: string, stream: MediaStream) {
+    let audio = this.remoteAudio.get(remoteId);
+    if (!audio) {
+      audio = document.createElement('audio');
+      audio.autoplay = true;
+      audio.setAttribute('playsinline', 'true');
+      audio.setAttribute('webkit-playsinline', 'true');
+      audio.style.display = 'none';
+      document.body.appendChild(audio);
+      this.remoteAudio.set(remoteId, audio);
+    }
+    if (audio.srcObject !== stream) audio.srcObject = stream;
+    audio.volume = this.computeGain(this.callbacks.getDistance(remoteId));
+    const playAttempt = audio.play();
+    if (playAttempt) {
+      playAttempt.catch(() => {
+        /* retried on the next user gesture via resumeAudio() */
+      });
+    }
+  }
+
+  private removeRemoteAudio(remoteId: string) {
+    const audio = this.remoteAudio.get(remoteId);
+    if (!audio) return;
+    this.remoteAudio.delete(remoteId);
+    try {
+      audio.pause();
+      audio.srcObject = null;
+      audio.remove();
+    } catch {
+      /* ignore */
+    }
+  }
+
+  private clearRemoteAudio() {
+    for (const id of [...this.remoteAudio.keys()]) this.removeRemoteAudio(id);
   }
 }

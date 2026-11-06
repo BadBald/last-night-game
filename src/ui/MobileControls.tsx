@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Backpack, Crosshair, Hand, MessageCircle, Mic, MicOff, RotateCw, Smartphone } from 'lucide-react';
+import { Backpack, Crosshair, Hand, RotateCw, Smartphone } from 'lucide-react';
 import { ITEMS } from '../data/items';
 import { InputManager } from '../engine/input';
 import { countItemInBackpack } from '../systems/inventory';
@@ -13,7 +13,6 @@ interface MobileControlsProps {
   onToggleInventory: () => void;
   onTogglePhone: () => void;
   onToggleChat: () => void;
-  onToggleMic: () => void;
   onQuickSlotClick: (slotIdx: number) => void;
   onInteract: () => void;
 }
@@ -24,15 +23,20 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
   onToggleInventory,
   onTogglePhone,
   onToggleChat,
-  onToggleMic,
   onQuickSlotClick,
   onInteract,
 }) => {
-  const { isCompactLandscape } = useViewportLayout();
+  const { isCompactLandscape, width } = useViewportLayout();
   const mode = snap.settings.mobileControlsMode;
   const shouldRender =
     mode === 'on' ||
     (mode === 'auto' && snap.isTouchDevice && !snap.isGamepadActive);
+
+  // Scale the thumb controls to the actual screen width so portrait phones
+  // (including very narrow ones) always keep both sticks fully on-screen.
+  const joySize = Math.round(Math.max(72, Math.min(112, width * 0.23)));
+  const joyKnobSize = Math.round(joySize * 0.45);
+  const aimInnerSize = Math.round(joySize * 0.66);
 
   const [leftKnob, setLeftKnob] = useState({ x: 0, y: 0, active: false });
   const [rightKnob, setRightKnob] = useState({
@@ -67,7 +71,7 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
 
   if (!isVisible) return null;
 
-  const maxRad = isCompactLandscape ? 30 : 38;
+  const maxRad = isCompactLandscape ? 30 : Math.round(joySize * 0.3);
   const equippedInst =
     snap.equippedSlot !== null ? snap.backpack[snap.equippedSlot] : null;
   const equippedDef = equippedInst ? ITEMS[equippedInst.itemId] : null;
@@ -509,10 +513,10 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
     <div className="fixed inset-x-0 bottom-0 z-15 pointer-events-none safe-area-controls pt-1 flex flex-col gap-1.5 select-none">
       <div className="flex sm:hidden justify-center">{quickBeltStrip}</div>
 
-      <div className="flex items-end justify-between gap-2 px-1 sm:px-3">
+      <div className="flex items-end justify-between gap-1.5 px-1 sm:gap-2 sm:px-3">
         {/* LEFT THUMB CLUSTER */}
         <div className="flex flex-col items-start gap-2 pointer-events-auto">
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1 sm:gap-1.5">
             <button
               type="button"
               onPointerDown={(e) => {
@@ -520,7 +524,7 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
                 input.mobileSprintToggled = !input.mobileSprintToggled;
                 if (input.mobileSprintToggled) input.mobileCrouchToggled = false;
               }}
-              className={`min-h-[44px] min-w-[60px] px-3 rounded-xl border text-xs font-semibold active:scale-95 transition-transform ${
+              className={`min-h-[40px] min-w-[50px] px-2 rounded-xl border text-[11px] sm:min-h-[44px] sm:min-w-[60px] sm:px-3 sm:text-xs font-semibold active:scale-95 transition-transform ${
                 snap.isSprinting
                   ? 'bg-[#e26d27] text-[#120d0a] border-[#f07c34]'
                   : 'bg-[#110c09]/92 text-[#d8c7b4] border-[#e4d4c6]/18'
@@ -536,7 +540,7 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
                 input.mobileCrouchToggled = !input.mobileCrouchToggled;
                 if (input.mobileCrouchToggled) input.mobileSprintToggled = false;
               }}
-              className={`min-h-[44px] min-w-[60px] px-3 rounded-xl border text-xs font-semibold active:scale-95 transition-transform ${
+              className={`min-h-[40px] min-w-[50px] px-2 rounded-xl border text-[11px] sm:min-h-[44px] sm:min-w-[60px] sm:px-3 sm:text-xs font-semibold active:scale-95 transition-transform ${
                 snap.isCrouching
                   ? 'bg-[#e6d6c3] text-[#120d0a] border-[#f7f2e7]'
                   : 'bg-[#110c09]/92 text-[#d8c7b4] border-[#e4d4c6]/18'
@@ -582,16 +586,19 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
               e.preventDefault();
               releaseLeftStick();
             }}
-            className={`w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-[#110c09]/84 border-2 flex items-center justify-center relative touch-none ${
+            className={`rounded-full bg-[#110c09]/84 border-2 flex items-center justify-center relative touch-none shrink-0 ${
               leftKnob.active ? 'border-[#e6d6c3]/75' : 'border-[#e4d4c6]/22'
             }`}
+            style={{ width: joySize, height: joySize }}
           >
             <span className="text-[10px] font-mono-num text-[#9c8b79] uppercase pointer-events-none">
               MOVE
             </span>
             <div
-              className="w-11 h-11 rounded-full bg-[#e6d6c3]/88 border border-[#f7f2e7] shadow-md pointer-events-none absolute"
+              className="rounded-full bg-[#e6d6c3]/88 border border-[#f7f2e7] shadow-md pointer-events-none absolute"
               style={{
+                width: joyKnobSize,
+                height: joyKnobSize,
                 transform: `translate(${leftKnob.x}px, ${leftKnob.y}px)`,
               }}
             />
@@ -603,57 +610,13 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
         {/* RIGHT THUMB CLUSTER */}
         <div className="flex flex-col items-end gap-2 pointer-events-auto">
           <div className="flex items-center gap-1.5">
-            {snap.online.isOnlineMode && (
-              <button
-                type="button"
-                onPointerDown={(e) => {
-                  e.preventDefault();
-                  onToggleMic();
-                }}
-                className={`min-w-[48px] min-h-[44px] px-2.5 rounded-xl border flex items-center justify-center gap-1 text-xs font-semibold active:scale-95 transition-transform ${
-                  snap.online.selfTalking
-                    ? 'bg-[#c9363b]/25 text-[#f3a093] border-[#c9363b]/70'
-                    : 'bg-[#110c09]/92 text-[#d8c7b4] border-[#e4d4c6]/18'
-                }`}
-                aria-label={snap.online.selfTalking ? 'Stop talking' : 'Start talking'}
-              >
-                {snap.online.selfTalking ? (
-                  <Mic className="w-4 h-4 shrink-0" />
-                ) : (
-                  <MicOff className="w-4 h-4 shrink-0" />
-                )}
-                <span className="hidden xs:inline">
-                  {snap.online.selfTalking ? 'Talking' : 'Mic'}
-                </span>
-              </button>
-            )}
-
-            {snap.online.isOnlineMode && (
-              <button
-                type="button"
-                onPointerDown={(e) => {
-                  e.preventDefault();
-                  onToggleChat();
-                }}
-                className="relative min-w-[44px] min-h-[44px] px-2.5 rounded-xl bg-[#110c09]/92 border border-[#e4d4c6]/18 text-[#d8c7b4] flex items-center justify-center active:scale-95 transition-transform"
-                aria-label="Open Squad Chat"
-              >
-                <MessageCircle className="w-4 h-4 shrink-0" />
-                {snap.online.unreadChatCount > 0 && (
-                  <span className="absolute -top-1 -right-1 px-1 rounded bg-[#e26d27] text-[#120d0a] text-[9px] font-mono-num font-bold leading-tight">
-                    {snap.online.unreadChatCount}
-                  </span>
-                )}
-              </button>
-            )}
-
             <button
               type="button"
               onPointerDown={(e) => {
                 e.preventDefault();
                 onTogglePhone();
               }}
-              className={`relative min-w-[48px] min-h-[44px] px-2.5 rounded-xl border flex items-center justify-center gap-1 text-xs font-semibold active:scale-95 transition-transform ${
+              className={`relative min-w-[42px] min-h-[40px] px-2 sm:min-w-[48px] sm:min-h-[44px] sm:px-2.5 rounded-xl border flex items-center justify-center gap-1 text-xs font-semibold active:scale-95 transition-transform ${
                 snap.flashlightBattery <= 18
                   ? 'bg-[#2a120e]/85 text-[#f3a093] border-[#c94a38]/70'
                   : snap.flashlightOn
@@ -678,7 +641,7 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
                 e.preventDefault();
                 input.triggerVirtualKey('KeyR');
               }}
-              className={`min-w-[44px] min-h-[44px] px-2.5 rounded-xl border flex items-center justify-center active:scale-95 transition-transform ${
+              className={`min-w-[40px] min-h-[40px] px-2 sm:min-w-[44px] sm:min-h-[44px] sm:px-2.5 rounded-xl border flex items-center justify-center active:scale-95 transition-transform ${
                 snap.isReloading
                   ? 'bg-[#e26d27]/20 border-[#e26d27] text-[#f39c59]'
                   : 'bg-[#110c09]/92 border-[#e4d4c6]/18 text-[#d8c7b4]'
@@ -696,7 +659,7 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
                 e.preventDefault();
                 onToggleInventory();
               }}
-              className="min-w-[48px] min-h-[44px] px-2.5 rounded-xl bg-[#110c09]/92 border border-[#e4d4c6]/18 text-[#d8c7b4] flex items-center justify-center gap-1 text-xs font-semibold active:scale-95 transition-transform"
+              className="min-w-[42px] min-h-[40px] px-2 sm:min-w-[48px] sm:min-h-[44px] sm:px-2.5 rounded-xl bg-[#110c09]/92 border border-[#e4d4c6]/18 text-[#d8c7b4] flex items-center justify-center gap-1 text-xs font-semibold active:scale-95 transition-transform"
               aria-label="Open Backpack"
             >
               <Backpack className="w-4 h-4 shrink-0 text-[#e26d27]" />
@@ -704,15 +667,15 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
             </button>
           </div>
 
-          <div className="flex items-end gap-2">
-            <div className="flex flex-col gap-1.5">
+          <div className="flex items-end gap-1 sm:gap-2">
+            <div className="flex flex-col gap-1 sm:gap-1.5">
               <button
                 type="button"
                 onPointerDown={(e) => {
                   e.preventDefault();
                   onInteract();
                 }}
-                className={`min-w-[58px] min-h-[46px] px-2.5 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1 active:scale-95 transition-all ${
+                className={`min-w-[50px] min-h-[42px] px-2 sm:min-w-[58px] sm:min-h-[46px] sm:px-2.5 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1 active:scale-95 transition-all ${
                   hasPrompt
                     ? 'bg-[#e26d27] text-[#120d0a] border-[#f07c34] shadow-lg'
                     : 'bg-[#110c09]/92 text-[#d8c7b4] border-[#e4d4c6]/18'
@@ -745,7 +708,7 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
                 onMouseUp={() => {
                   input.mobileFireHeld = false;
                 }}
-                className="min-w-[58px] min-h-[54px] px-2.5 rounded-2xl bg-[#c94a38] active:bg-[#e0523c] border-2 border-[#e67a68]/80 text-[#f7f2e7] text-xs font-bold flex flex-col items-center justify-center leading-none gap-0.5 shadow-lg active:scale-95 transition-transform"
+                className="min-w-[50px] min-h-[48px] px-2 sm:min-w-[58px] sm:min-h-[54px] sm:px-2.5 rounded-2xl bg-[#c94a38] active:bg-[#e0523c] border-2 border-[#e67a68]/80 text-[#f7f2e7] text-xs font-bold flex flex-col items-center justify-center leading-none gap-0.5 shadow-lg active:scale-95 transition-transform"
                 aria-label="Attack or Fire Weapon"
               >
                 <Crosshair className="w-4 h-4" />
@@ -791,26 +754,32 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
                 e.preventDefault();
                 releaseRightStick();
               }}
-              className={`w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-[#110c09]/84 border-2 flex items-center justify-center relative touch-none transition-colors ${
+              className={`rounded-full bg-[#110c09]/84 border-2 flex items-center justify-center relative touch-none shrink-0 ${
                 rightKnob.firing
                   ? 'border-[#e0523c] bg-[#2a120e]/45'
                   : rightKnob.active
                   ? 'border-[#e26d27]'
                   : 'border-[#e26d27]/45'
               }`}
+              style={{ width: joySize, height: joySize }}
             >
-              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border border-dashed border-[#e26d27]/28 pointer-events-none flex items-center justify-center">
+              <div
+                className="rounded-full border border-dashed border-[#e26d27]/28 pointer-events-none flex items-center justify-center"
+                style={{ width: aimInnerSize, height: aimInnerSize }}
+              >
                 <span className="text-[9px] font-mono-num text-[#f39c59]/80 uppercase pointer-events-none text-center leading-tight">
                   {rightKnob.firing ? 'FIRE' : 'AIM'}
                 </span>
               </div>
               <div
-                className={`w-11 h-11 rounded-full border shadow-md pointer-events-none absolute ${
+                className={`rounded-full border shadow-md pointer-events-none absolute ${
                   rightKnob.firing
                     ? 'bg-[#c94a38] border-[#f7d6cf]'
                     : 'bg-[#e26d27]/90 border-[#f7f2e7]'
                 }`}
                 style={{
+                  width: joyKnobSize,
+                  height: joyKnobSize,
                   transform: `translate(${rightKnob.x}px, ${rightKnob.y}px)`,
                 }}
               />

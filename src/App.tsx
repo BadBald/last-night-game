@@ -133,7 +133,6 @@ export default function App() {
             }
             onTogglePhone={() => engine.setPanel('PHONE')}
             onToggleChat={() => engine.setPanel('CHAT')}
-            onToggleMic={() => engine.toggleTalking()}
             onQuickSlotClick={(idx) => engine.useOrEquipBackpackSlot(idx)}
             onInteract={() => engine.triggerInteract()}
           />

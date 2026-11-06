@@ -213,6 +213,17 @@ export const HUD: React.FC<HUDProps> = ({
               </button>
             )}
 
+            {snap.online.isOnlineMode && (
+              <LandscapeIconBtn
+                onClick={onToggleChat}
+                label="Open Squad Chat"
+                active={snap.panel === 'CHAT'}
+                badgeCount={snap.online.unreadChatCount}
+              >
+                <MessageCircle className="w-3.5 h-3.5" />
+              </LandscapeIconBtn>
+            )}
+
             <LandscapeIconBtn
               onClick={onToggleInventory}
               label="Open Survivor Backpack"
@@ -252,7 +263,7 @@ export const HUD: React.FC<HUDProps> = ({
          ===================================================================== */}
       {isPortraitOrCompactTouch && (
         <div className="flex items-start justify-between gap-2">
-          <div className="pointer-events-auto bg-[#110c09]/90 border border-[#e4d4c6]/16 rounded-xl px-2.5 py-2 min-w-[160px] max-w-[196px]">
+          <div className="pointer-events-auto bg-[#110c09]/90 border border-[#e4d4c6]/16 rounded-xl px-2 py-1.5 min-w-[128px] max-w-[168px] sm:px-2.5 sm:py-2 sm:min-w-[160px] sm:max-w-[196px]">
             <div className="grid grid-cols-2 gap-x-2.5 gap-y-1.5">
               <MiniStat
                 code="HP"
@@ -317,12 +328,12 @@ export const HUD: React.FC<HUDProps> = ({
             )}
           </div>
 
-          <div className="flex items-center gap-1.5 pointer-events-auto">
-            {!touchModeActive && snap.online.isOnlineMode && (
+          <div className="flex items-center justify-end gap-1 sm:gap-1.5 pointer-events-auto shrink-0">
+            {snap.online.isOnlineMode && (
               <button
                 type="button"
                 onClick={onToggleMic}
-                className={`min-w-[44px] min-h-[44px] rounded-xl border flex items-center justify-center cursor-pointer transition-colors ${
+                className={`min-w-[36px] min-h-[36px] sm:min-w-[44px] sm:min-h-[44px] rounded-xl border flex items-center justify-center cursor-pointer transition-colors ${
                   snap.online.selfTalking
                     ? 'bg-[#c9363b]/25 border-[#c9363b]/70 text-[#f3a093]'
                     : 'bg-[#110c09]/92 active:bg-[#1f1712] border-[#e4d4c6]/16 text-[#d8c7b4]'
@@ -331,9 +342,25 @@ export const HUD: React.FC<HUDProps> = ({
                 title="Toggle voice chat (T)"
               >
                 {snap.online.selfTalking ? (
-                  <Mic className="w-4 h-4" />
+                  <Mic className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 ) : (
-                  <MicOff className="w-4 h-4" />
+                  <MicOff className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                )}
+              </button>
+            )}
+            {snap.online.isOnlineMode && (
+              <button
+                type="button"
+                onClick={onToggleChat}
+                className="relative min-w-[36px] min-h-[36px] sm:min-w-[44px] sm:min-h-[44px] rounded-xl bg-[#110c09]/92 active:bg-[#1f1712] border border-[#e4d4c6]/16 flex items-center justify-center text-[#d8c7b4] cursor-pointer transition-colors"
+                aria-label="Open Squad Chat"
+                title="Squad Chat (C)"
+              >
+                <MessageCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                {snap.online.unreadChatCount > 0 && (
+                  <span className="absolute -top-1 -right-1 px-1 rounded bg-[#e26d27] text-[#120d0a] text-[9px] font-mono-num font-bold leading-tight">
+                    {snap.online.unreadChatCount}
+                  </span>
                 )}
               </button>
             )}
@@ -341,7 +368,7 @@ export const HUD: React.FC<HUDProps> = ({
               <button
                 type="button"
                 onClick={onTogglePhone}
-                className={`relative min-w-[44px] min-h-[44px] rounded-xl border flex items-center justify-center cursor-pointer transition-colors ${
+                className={`relative min-w-[36px] min-h-[36px] sm:min-w-[44px] sm:min-h-[44px] rounded-xl border flex items-center justify-center cursor-pointer transition-colors ${
                   isPhoneBatteryLow
                     ? 'bg-[#2a120e]/85 border-[#c94a38]/70 text-[#f3a093]'
                     : snap.flashlightOn
@@ -350,7 +377,7 @@ export const HUD: React.FC<HUDProps> = ({
                 }`}
                 aria-label="Open Phone"
               >
-                <Smartphone className="w-4 h-4" />
+                <Smartphone className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 {snap.unreadRadioCount > 0 && (
                   <span className="absolute -top-1 -right-1 px-1 rounded bg-[#e26d27] text-[#120d0a] text-[9px] font-mono-num font-bold leading-tight">
                     {snap.unreadRadioCount}
@@ -362,7 +389,7 @@ export const HUD: React.FC<HUDProps> = ({
             <button
               type="button"
               onClick={onToggleFullscreen}
-              className={`min-w-[44px] min-h-[44px] rounded-xl border flex items-center justify-center cursor-pointer transition-colors ${
+              className={`min-w-[36px] min-h-[36px] sm:min-w-[44px] sm:min-h-[44px] rounded-xl border flex items-center justify-center cursor-pointer transition-colors ${
                 isFullscreen
                   ? 'bg-[#e26d27]/20 border-[#e26d27]/70 text-[#f39c59]'
                   : 'bg-[#110c09]/92 active:bg-[#1f1712] border-[#e4d4c6]/16 text-[#d8c7b4]'
@@ -371,19 +398,19 @@ export const HUD: React.FC<HUDProps> = ({
               title={isFullscreen ? 'Exit Fullscreen' : 'Full Screen'}
             >
               {isFullscreen ? (
-                <Minimize2 className="w-4 h-4" />
+                <Minimize2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               ) : (
-                <Maximize2 className="w-4 h-4" />
+                <Maximize2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               )}
             </button>
 
             <button
               type="button"
               onClick={onTogglePause}
-              className="min-w-[44px] min-h-[44px] rounded-xl bg-[#110c09]/92 active:bg-[#1f1712] border border-[#e4d4c6]/16 flex items-center justify-center text-[#d8c7b4] cursor-pointer transition-colors"
+              className="min-w-[36px] min-h-[36px] sm:min-w-[44px] sm:min-h-[44px] rounded-xl bg-[#110c09]/92 active:bg-[#1f1712] border border-[#e4d4c6]/16 flex items-center justify-center text-[#d8c7b4] cursor-pointer transition-colors"
               aria-label="Pause Game"
             >
-              <Pause className="w-4 h-4" />
+              <Pause className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </button>
           </div>
         </div>

@@ -827,12 +827,20 @@ export class GameEngine {
         return Math.hypot(rs.x - this.player.x, rs.y - this.player.y);
       },
     });
-    void this.voiceChat.enable();
+    // Acquire the mic first, then build the mesh with the real track. If the
+    // player denies the prompt, peers still get created with a silent
+    // placeholder so they can hear everyone else.
+    void this.voiceChat.enable().then(() => {
+      for (const np of players) {
+        if (np.id !== this.selfId) {
+          this.voiceChat?.ensurePeer(np.id);
+        }
+      }
+    });
 
     for (const np of players) {
       if (np.id !== this.selfId) {
         this.upsertRemoteSurvivor(np, true);
-        this.voiceChat.ensurePeer(np.id);
       }
     }
 
@@ -1311,7 +1319,11 @@ export class GameEngine {
 
   public enableVoice() {
     if (!this.voiceChat) return;
-    void this.voiceChat.enable();
+    void this.voiceChat.enable().then(() => {
+      for (const id of this.remoteSurvivors.keys()) {
+        this.voiceChat?.ensurePeer(id);
+      }
+    });
   }
 
   public toggleTalking() {
@@ -1336,6 +1348,10 @@ export class GameEngine {
       }
       this.isTalking = true;
       this.voiceChat?.setTalking(true);
+      // If the first permission attempt was denied, no peers were built yet.
+      for (const id of this.remoteSurvivors.keys()) {
+        this.voiceChat?.ensurePeer(id);
+      }
       this.emitSnapshot();
     });
   }
