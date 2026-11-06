@@ -11,6 +11,7 @@ import {
   MicOff,
   Play,
   Radio,
+  Send,
   Signal,
   Square,
   Volume2,
@@ -56,7 +57,8 @@ export const PhoneModal: React.FC<PhoneModalProps> = ({
   const padActive = snap.isGamepadActive;
   const feedScrollRef = useRef<HTMLDivElement | null>(null);
   const msgRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const chatScrollRef = useRef<HTMLDivElement | null>(null);
+  const phoneBodyRef = useRef<HTMLDivElement | null>(null);
+  const chatInputRef = useRef<HTMLInputElement | null>(null);
 
   const [activeTab, setActiveTab] = useState<PhoneAppTab>(() =>
     snap.unreadRadioCount > 0 || Boolean(snap.activeRadioBroadcast) ? 'radio' : 'maps'
@@ -78,9 +80,12 @@ export const PhoneModal: React.FC<PhoneModalProps> = ({
   }, [activeTab, snap.unreadRadioCount, snap.online.unreadChatCount, onClearUnreadRadio, onClearUnreadChat]);
 
   useEffect(() => {
-    if (chatScrollRef.current) {
-      chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
-    }
+    if (activeTab !== 'chat') return;
+    const body = phoneBodyRef.current;
+    if (!body) return;
+    // Chat uses the phone body as its single scroll container. Keeping one
+    // scroller makes touch scrolling reliable on mobile (no nested traps).
+    body.scrollTop = body.scrollHeight;
   }, [snap.online.chatMessages.length, activeTab]);
 
   // Gamepad navigation inside Survivor Phone
@@ -913,10 +918,20 @@ export const PhoneModal: React.FC<PhoneModalProps> = ({
   );
 
   const renderChatApp = () => {
-    const handleSend = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    const sendDraft = () => {
+      const input = chatInputRef.current;
+      const t = input?.value.trim() ?? '';
+      if (!t) return;
+      onSendChat(t);
+      if (input) input.value = '';
+      const body = phoneBodyRef.current;
+      if (body) body.scrollTop = body.scrollHeight;
+      input?.focus();
+    };
+    const handleSendKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
       if (e.key === 'Enter') {
-        const t = (e.target as HTMLInputElement).value.trim();
-        if (t) { onSendChat(t); (e.target as HTMLInputElement).value = ''; }
+        e.preventDefault();
+        sendDraft();
       }
     };
     const isTalking = snap.online.selfTalking;
@@ -928,19 +943,20 @@ export const PhoneModal: React.FC<PhoneModalProps> = ({
             type="button"
             onClick={onToggleMic}
             className={`min-h-[36px] px-3 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${isTalking ? 'bg-[#c9363b] text-[#f8eded]' : 'bg-[#19130f] text-[#9c8b79] border border-[#e4d4c6]/16'}`}
+            aria-label={isTalking ? 'Stop talking' : 'Start talking'}
           >
             {isTalking ? <Mic className="w-3.5 h-3.5" /> : <MicOff className="w-3.5 h-3.5" />}
-            {isTalking ? 'Talking' : 'Hold to Talk'}
+            {isTalking ? 'Talking' : 'Tap to Talk'}
           </button>
         </div>
-        <div ref={chatScrollRef} className="max-h-[220px] overflow-y-auto scroll-touch space-y-1.5 pr-1">
+        <div className="space-y-1.5 pr-1">
           {snap.online.chatMessages.length === 0 && (
             <p className="text-xs text-[#9c8b79] text-center mt-6">No messages yet.</p>
           )}
           {snap.online.chatMessages.map((m) => (
             <div key={m.id} className={`flex flex-col ${m.fromId === snap.online.selfId ? 'items-end' : 'items-start'}`}>
               <span className="text-[10px] font-mono-num text-[#9c8b79] mb-0.5">{m.fromCallsign}</span>
-              <div className={`max-w-[85%] px-2.5 py-1 rounded-lg text-xs leading-relaxed ${m.fromId === snap.online.selfId ? 'bg-[#e26d27] text-[#120d0a] rounded-br-sm' : 'bg-[#19130f] border border-[#e4d4c6]/16 text-[#f7f2e7] rounded-bl-sm'}`}>
+              <div className={`max-w-[85%] px-2.5 py-1 rounded-lg text-xs leading-relaxed break-words ${m.fromId === snap.online.selfId ? 'bg-[#e26d27] text-[#120d0a] rounded-br-sm' : 'bg-[#19130f] border border-[#e4d4c6]/16 text-[#f7f2e7] rounded-bl-sm'}`}>
                 {m.text}
               </div>
             </div>
@@ -948,14 +964,32 @@ export const PhoneModal: React.FC<PhoneModalProps> = ({
         </div>
         <div className="flex items-center gap-2 pt-2 border-t border-[#e4d4c6]/14">
           <input
+            ref={chatInputRef}
             type="text"
+            inputMode="text"
+            autoComplete="off"
+            enterKeyHint="send"
             placeholder="Type a message..."
             className="flex-1 min-h-[36px] px-2.5 py-1.5 rounded-lg bg-[#0b0806] border border-[#e4d4c6]/16 text-[#f7f2e7] text-xs placeholder:text-[#9c8b79] focus:outline-none focus:border-[#e26d27]/60"
             maxLength={200}
-            onKeyDown={handleSend}
+            onKeyDown={handleSendKey}
+            onFocus={() => {
+              window.setTimeout(() => {
+                const body = phoneBodyRef.current;
+                if (body) body.scrollTop = body.scrollHeight;
+              }, 250);
+            }}
           />
+          <button
+            type="button"
+            onClick={sendDraft}
+            className="min-w-[38px] min-h-[36px] rounded-lg bg-[#e26d27] hover:bg-[#f07c34] text-[#120d0a] flex items-center justify-center cursor-pointer active:scale-95 transition-transform"
+            aria-label="Send message"
+          >
+            <Send className="w-3.5 h-3.5" />
+          </button>
         </div>
-        <p className="text-[10px] text-[#9c8b79]">Press T to talk on PC. Mic button toggles talk on mobile.</p>
+        <p className="text-[10px] text-[#9c8b79]">Tap the mic or press T to toggle voice chat.</p>
       </div>
     );
   };
@@ -983,6 +1017,7 @@ export const PhoneModal: React.FC<PhoneModalProps> = ({
         </div>
 
         <div
+          ref={phoneBodyRef}
           className={`scroll-touch overflow-y-auto flex-1 ${
             isCompactLandscape ? 'px-4 pb-3.5 pt-1' : 'px-4 sm:px-5 pb-4 pt-1'
           }`}

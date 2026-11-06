@@ -975,6 +975,8 @@ export class GameEngine {
 
   private handleAudioUnlockGesture = () => {
     this.sound.ensureUnlocked();
+    // Browsers suspend WebAudio until a gesture; nudge voice playback too.
+    this.voiceChat?.resumeAudio();
   };
 
   public startLoop() {
@@ -1314,9 +1316,26 @@ export class GameEngine {
 
   public toggleTalking() {
     if (!this.voiceChat) return;
-    void this.voiceChat.enable().then(() => {
-      this.isTalking = !this.isTalking;
-      this.voiceChat?.setTalking(this.isTalking);
+    if (this.isTalking) {
+      this.isTalking = false;
+      this.voiceChat.setTalking(false);
+      this.emitSnapshot();
+      return;
+    }
+    void this.voiceChat.enable().then((ok) => {
+      if (!ok) {
+        this.isTalking = false;
+        this.voiceChat?.setTalking(false);
+        this.pushToast(
+          'Microphone Unavailable',
+          'Allow microphone access in your browser to use voice chat.',
+          true
+        );
+        this.emitSnapshot();
+        return;
+      }
+      this.isTalking = true;
+      this.voiceChat?.setTalking(true);
       this.emitSnapshot();
     });
   }
@@ -1829,14 +1848,9 @@ export class GameEngine {
       if (this.isOnlineMatch && this.input.consumeJustPressed('KeyC')) {
         this.setPanel(this.panel === 'CHAT' ? 'NONE' : 'CHAT');
       }
-      // Push-to-talk (T)
-      if (this.isOnlineMatch && this.voiceChat) {
-        const wantTalk = this.input.isHeld('KeyT');
-        if (wantTalk !== this.isTalking) {
-          this.isTalking = wantTalk;
-          this.voiceChat.setTalking(wantTalk);
-          this.emitSnapshot();
-        }
+      // Voice chat toggle (T). Click/tap the in-game mic to toggle it too.
+      if (this.isOnlineMatch && this.voiceChat && this.input.consumeJustPressed('KeyT')) {
+        this.toggleTalking();
       }
     }
 

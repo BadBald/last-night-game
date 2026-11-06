@@ -111,6 +111,16 @@ export function subscribeGamepadUI(
   return () => window.removeEventListener(GAMEPAD_UI_EVENT, listener);
 }
 
+function isEditableTarget(target: EventTarget | null): boolean {
+  if (!target || typeof HTMLElement === 'undefined' || !(target instanceof HTMLElement)) {
+    return false;
+  }
+  if (target.isContentEditable) return true;
+  const tag = target.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
+  return Boolean(target.closest('input, textarea, select, [contenteditable="true"]'));
+}
+
 function detectGamepadInfo(rawId: string): {
   brand: GamepadBrand;
   friendlyName: string;
@@ -245,6 +255,7 @@ export class InputManager {
     this.canvas = canvas;
     window.addEventListener('keydown', this.onKeyDown);
     window.addEventListener('keyup', this.onKeyUp);
+    window.addEventListener('focusin', this.onFocusIn);
     window.addEventListener('blur', this.onBlur);
     window.addEventListener('touchstart', this.onFirstTouch, { passive: true });
     window.addEventListener('gamepadconnected', this.onGamepadConnected);
@@ -258,6 +269,7 @@ export class InputManager {
   public detach() {
     window.removeEventListener('keydown', this.onKeyDown);
     window.removeEventListener('keyup', this.onKeyUp);
+    window.removeEventListener('focusin', this.onFocusIn);
     window.removeEventListener('blur', this.onBlur);
     window.removeEventListener('touchstart', this.onFirstTouch);
     window.removeEventListener('gamepadconnected', this.onGamepadConnected);
@@ -371,6 +383,13 @@ export class InputManager {
 
   private onKeyDown = (e: KeyboardEvent) => {
     const code = e.code;
+    // While the player is typing in chat or any form field, never treat the
+    // keystroke as a gameplay hotkey (I opened the backpack mid-sentence).
+    if (isEditableTarget(e.target) && code !== 'Escape') {
+      this.heldKeys.clear();
+      this.justPressedKeys.clear();
+      return;
+    }
     if (
       code === 'Tab' ||
       code === 'Space' ||
@@ -390,6 +409,13 @@ export class InputManager {
 
   private onKeyUp = (e: KeyboardEvent) => {
     this.heldKeys.delete(e.code);
+  };
+
+  private onFocusIn = (e: FocusEvent) => {
+    if (!isEditableTarget(e.target)) return;
+    // Drop movement/actions that were held before the text field took focus.
+    this.heldKeys.clear();
+    this.justPressedKeys.clear();
   };
 
   private onBlur = () => {

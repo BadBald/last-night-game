@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Backpack, Crosshair, Hand, MessageCircle, RotateCw, Smartphone } from 'lucide-react';
+import { Backpack, Crosshair, Hand, MessageCircle, Mic, MicOff, RotateCw, Smartphone } from 'lucide-react';
 import { ITEMS } from '../data/items';
 import { InputManager } from '../engine/input';
 import { countItemInBackpack } from '../systems/inventory';
@@ -13,6 +13,7 @@ interface MobileControlsProps {
   onToggleInventory: () => void;
   onTogglePhone: () => void;
   onToggleChat: () => void;
+  onToggleMic: () => void;
   onQuickSlotClick: (slotIdx: number) => void;
   onInteract: () => void;
 }
@@ -23,6 +24,7 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
   onToggleInventory,
   onTogglePhone,
   onToggleChat,
+  onToggleMic,
   onQuickSlotClick,
   onInteract,
 }) => {
@@ -601,6 +603,50 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
         {/* RIGHT THUMB CLUSTER */}
         <div className="flex flex-col items-end gap-2 pointer-events-auto">
           <div className="flex items-center gap-1.5">
+            {snap.online.isOnlineMode && (
+              <button
+                type="button"
+                onPointerDown={(e) => {
+                  e.preventDefault();
+                  onToggleMic();
+                }}
+                className={`min-w-[48px] min-h-[44px] px-2.5 rounded-xl border flex items-center justify-center gap-1 text-xs font-semibold active:scale-95 transition-transform ${
+                  snap.online.selfTalking
+                    ? 'bg-[#c9363b]/25 text-[#f3a093] border-[#c9363b]/70'
+                    : 'bg-[#110c09]/92 text-[#d8c7b4] border-[#e4d4c6]/18'
+                }`}
+                aria-label={snap.online.selfTalking ? 'Stop talking' : 'Start talking'}
+              >
+                {snap.online.selfTalking ? (
+                  <Mic className="w-4 h-4 shrink-0" />
+                ) : (
+                  <MicOff className="w-4 h-4 shrink-0" />
+                )}
+                <span className="hidden xs:inline">
+                  {snap.online.selfTalking ? 'Talking' : 'Mic'}
+                </span>
+              </button>
+            )}
+
+            {snap.online.isOnlineMode && (
+              <button
+                type="button"
+                onPointerDown={(e) => {
+                  e.preventDefault();
+                  onToggleChat();
+                }}
+                className="relative min-w-[44px] min-h-[44px] px-2.5 rounded-xl bg-[#110c09]/92 border border-[#e4d4c6]/18 text-[#d8c7b4] flex items-center justify-center active:scale-95 transition-transform"
+                aria-label="Open Squad Chat"
+              >
+                <MessageCircle className="w-4 h-4 shrink-0" />
+                {snap.online.unreadChatCount > 0 && (
+                  <span className="absolute -top-1 -right-1 px-1 rounded bg-[#e26d27] text-[#120d0a] text-[9px] font-mono-num font-bold leading-tight">
+                    {snap.online.unreadChatCount}
+                  </span>
+                )}
+              </button>
+            )}
+
             <button
               type="button"
               onPointerDown={(e) => {

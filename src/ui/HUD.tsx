@@ -29,6 +29,7 @@ interface HUDProps {
   onTogglePhone: () => void;
   onToggleChat: () => void;
   onToggleMute: () => void;
+  onToggleMic: () => void;
   onTogglePause: () => void;
   onQuickSlotClick: (slotIdx: number) => void;
   onInteract: () => void;
@@ -45,6 +46,7 @@ export const HUD: React.FC<HUDProps> = ({
   onTogglePhone,
   onToggleChat,
   onToggleMute,
+  onToggleMic,
   onTogglePause,
   onQuickSlotClick,
   onInteract,
@@ -194,19 +196,22 @@ export const HUD: React.FC<HUDProps> = ({
               <Smartphone className="w-3.5 h-3.5" />
             </LandscapeIconBtn>
 
-             {snap.online.isOnlineMode && (
-               <div
-                 className={`min-h-[40px] px-2 flex items-center gap-1 rounded-xl border text-xs font-semibold ${
-                   snap.online.selfTalking
-                     ? 'bg-[#c9363b]/20 text-[#f3a093] border-[#c9363b]/60'
-                     : 'bg-[#19130f] text-[#9c8b79] border-[#e4d4c6]/16'
-                 }`}
-                 title="Push-to-talk (hold T)"
-               >
-                 {snap.online.selfTalking ? <Mic className="w-3.5 h-3.5" /> : <MicOff className="w-3.5 h-3.5" />}
-                 <span className="hidden sm:inline">{snap.online.selfTalking ? 'Talking' : 'T: Talk'}</span>
-               </div>
-             )}
+            {snap.online.isOnlineMode && (
+              <button
+                type="button"
+                onClick={onToggleMic}
+                className={`min-h-[40px] px-2 flex items-center gap-1 rounded-xl border text-xs font-semibold cursor-pointer active:scale-95 transition-transform ${
+                  snap.online.selfTalking
+                    ? 'bg-[#c9363b]/25 text-[#f3a093] border-[#c9363b]/70'
+                    : 'bg-[#19130f] text-[#9c8b79] border-[#e4d4c6]/16'
+                }`}
+                title="Toggle voice chat (T)"
+                aria-label={snap.online.selfTalking ? 'Stop talking' : 'Start talking'}
+              >
+                {snap.online.selfTalking ? <Mic className="w-3.5 h-3.5" /> : <MicOff className="w-3.5 h-3.5" />}
+                <span className="hidden sm:inline">{snap.online.selfTalking ? 'Talking' : 'T: Mic'}</span>
+              </button>
+            )}
 
             <LandscapeIconBtn
               onClick={onToggleInventory}
@@ -313,6 +318,25 @@ export const HUD: React.FC<HUDProps> = ({
           </div>
 
           <div className="flex items-center gap-1.5 pointer-events-auto">
+            {!touchModeActive && snap.online.isOnlineMode && (
+              <button
+                type="button"
+                onClick={onToggleMic}
+                className={`min-w-[44px] min-h-[44px] rounded-xl border flex items-center justify-center cursor-pointer transition-colors ${
+                  snap.online.selfTalking
+                    ? 'bg-[#c9363b]/25 border-[#c9363b]/70 text-[#f3a093]'
+                    : 'bg-[#110c09]/92 active:bg-[#1f1712] border-[#e4d4c6]/16 text-[#d8c7b4]'
+                }`}
+                aria-label={snap.online.selfTalking ? 'Stop talking' : 'Start talking'}
+                title="Toggle voice chat (T)"
+              >
+                {snap.online.selfTalking ? (
+                  <Mic className="w-4 h-4" />
+                ) : (
+                  <MicOff className="w-4 h-4" />
+                )}
+              </button>
+            )}
             {!touchModeActive && (
               <button
                 type="button"
@@ -712,6 +736,27 @@ export const HUD: React.FC<HUDProps> = ({
                 );
               })}
             </div>
+
+            {snap.online.isOnlineMode && (
+              <button
+                type="button"
+                onClick={onToggleMic}
+                className={`min-h-[44px] flex items-center gap-2 px-3.5 py-3 rounded-xl border text-xs font-semibold transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+                  snap.online.selfTalking
+                    ? 'bg-[#c9363b]/25 hover:bg-[#c9363b]/35 text-[#f3a093] border-[#c9363b]/70'
+                    : 'bg-[#110c09]/90 hover:bg-[#1c1510] text-[#f7f2e7] border-[#e4d4c6]/16'
+                }`}
+                title="Toggle voice chat (T)"
+                aria-label={snap.online.selfTalking ? 'Stop talking' : 'Start talking'}
+              >
+                {snap.online.selfTalking ? (
+                  <Mic className="w-4 h-4 shrink-0" />
+                ) : (
+                  <MicOff className="w-4 h-4 shrink-0 text-[#9c8b79]" />
+                )}
+                <span>{snap.online.selfTalking ? 'Talking' : 'Mic [T]'}</span>
+              </button>
+            )}
 
             <button
               type="button"

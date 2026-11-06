@@ -73,6 +73,7 @@ export default function App() {
               onTogglePhone={() => engine.setPanel('PHONE')}
               onToggleChat={() => engine.setPanel('CHAT')}
               onToggleMute={() => engine.toggleMute()}
+              onToggleMic={() => engine.toggleTalking()}
               onTogglePause={() => engine.togglePause()}
               onQuickSlotClick={(idx) => engine.useOrEquipBackpackSlot(idx)}
               onInteract={() => engine.triggerInteract()}
@@ -132,6 +133,7 @@ export default function App() {
             }
             onTogglePhone={() => engine.setPanel('PHONE')}
             onToggleChat={() => engine.setPanel('CHAT')}
+            onToggleMic={() => engine.toggleTalking()}
             onQuickSlotClick={(idx) => engine.useOrEquipBackpackSlot(idx)}
             onInteract={() => engine.triggerInteract()}
           />

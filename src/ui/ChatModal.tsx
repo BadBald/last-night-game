@@ -99,7 +99,7 @@ export const ChatModal: React.FC<{
           </button>
         </div>
         <div className="px-4 pb-2 text-[10px] text-[#9c8b79]">
-          Press T to talk (push-to-talk). Messages reach all squad members.
+          Press T or tap the in-game mic to toggle voice chat. Messages reach all squad members.
         </div>
       </div>
     </div>
