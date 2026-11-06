@@ -274,6 +274,54 @@ const rooms = new Map<string, MatchRoom>();
 const clientToRoom = new Map<string, string>();
 const socketsById = new Map<string, WebSocket>();
 
+// Voice relay tuning. Microphone audio travels as binary frames over the same
+// WebSocket the game already uses, so it works behind carrier CGNAT where a
+// peer-to-peer WebRTC connection cannot be established.
+const VOICE_RELAY_MAX_BYTES = 4096;
+const VOICE_RELAY_RANGE = 2000; // world units; the client applies the fade
+const VOICE_RELAY_MAX_FPS = 80;
+const voiceRate = new Map<string, { windowStart: number; count: number }>();
+
+function relayVoiceFrame(clientId: string, buf: Buffer) {
+  // Client frame: [version:1][PCM16 LE ...]
+  if (buf.length < 3 || buf.length > VOICE_RELAY_MAX_BYTES || buf[0] !== 1) return;
+  const roomId = clientToRoom.get(clientId);
+  if (!roomId) return;
+  const room = rooms.get(roomId);
+  if (!room || room.phase !== 'IN_PROGRESS') return;
+  const player = room.players.get(clientId);
+  if (!player || !player.alive) return;
+
+  const now = Date.now();
+  let rate = voiceRate.get(clientId);
+  if (!rate || now - rate.windowStart > 1000) {
+    rate = { windowStart: now, count: 0 };
+    voiceRate.set(clientId, rate);
+  }
+  rate.count += 1;
+  if (rate.count > VOICE_RELAY_MAX_FPS) return;
+
+  const pcm = buf.subarray(1);
+  if (pcm.length < 2) return;
+  const idBuf = Buffer.from(player.id, 'utf8');
+  if (idBuf.length === 0 || idBuf.length > 64) return;
+  // Server frame: [version:1][idLength:1][senderId][PCM16 LE ...]
+  const out = Buffer.allocUnsafe(2 + idBuf.length + pcm.length);
+  out[0] = 1;
+  out[1] = idBuf.length;
+  idBuf.copy(out, 2);
+  pcm.copy(out, 2 + idBuf.length);
+
+  for (const target of room.players.values()) {
+    if (target.id === player.id) continue;
+    if (target.ws.readyState !== WebSocket.OPEN) continue;
+    if (Math.hypot(target.x - player.x, target.y - player.y) > VOICE_RELAY_RANGE) {
+      continue;
+    }
+    target.ws.send(out, { binary: true });
+  }
+}
+
 function randomRoomCode(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let code = '';
@@ -734,7 +782,16 @@ async function startServer() {
       lobbies: getPublicRoomSummaries(),
     });
 
-    ws.on('message', (rawBuf) => {
+    ws.on('message', (rawBuf, isBinary) => {
+      if (isBinary) {
+        const buf = Buffer.isBuffer(rawBuf)
+          ? rawBuf
+          : Array.isArray(rawBuf)
+          ? Buffer.concat(rawBuf)
+          : Buffer.from(rawBuf as ArrayBuffer);
+        relayVoiceFrame(clientId, buf);
+        return;
+      }
       let msg: Record<string, unknown>;
       try {
         msg = JSON.parse(String(rawBuf)) as Record<string, unknown>;
@@ -1170,6 +1227,7 @@ async function startServer() {
 
     ws.on('close', () => {
       socketsById.delete(clientId);
+      voiceRate.delete(clientId);
       removeClientFromCurrentRoom(clientId);
     });
   });

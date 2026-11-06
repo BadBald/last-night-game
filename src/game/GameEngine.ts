@@ -560,6 +560,10 @@ export class GameEngine {
         }
         this.emitSnapshot();
       },
+      onVoiceAudio: (fromId, pcm) => {
+        if (!this.isOnlineMatch) return;
+        this.voiceChat?.handleAudio(fromId, pcm);
+      },
     });
 
     this.world = buildCityWorld();
@@ -818,6 +822,9 @@ export class GameEngine {
       },
       sendState: (talking) => {
         this.mp.send({ type: 'voice:state', talking });
+      },
+      sendAudio: (frame) => {
+        this.mp.sendBinary(frame);
       },
       getSelfId: () => this.selfId,
       getRemoteIds: () => [...this.remoteSurvivors.keys()],

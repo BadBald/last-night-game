@@ -164,6 +164,7 @@ export interface MultiplayerClientHandlers {
     payload: unknown;
   }) => void;
   onVoiceState: (data: { playerId: string; callsign: string; talking: boolean }) => void;
+  onVoiceAudio: (fromId: string, pcm: Int16Array) => void;
 }
 
 export class MultiplayerClient {
@@ -221,6 +222,7 @@ export class MultiplayerClient {
 
     try {
       const socket = new WebSocket(wsUrl);
+      socket.binaryType = 'arraybuffer';
       this.ws = socket;
 
       socket.onopen = () => {
@@ -240,6 +242,10 @@ export class MultiplayerClient {
 
       socket.onmessage = (ev) => {
         if (this.destroyed) return;
+        if (ev.data instanceof ArrayBuffer) {
+          this.handleBinaryMessage(ev.data);
+          return;
+        }
         let data: Record<string, unknown>;
         try {
           data = JSON.parse(String(ev.data)) as Record<string, unknown>;
@@ -280,6 +286,13 @@ export class MultiplayerClient {
     }
   }
 
+  /** Send a raw binary frame (used for relayed microphone audio). */
+  public sendBinary(data: ArrayBuffer) {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(data);
+    }
+  }
+
   public send(payload: Record<string, unknown>, bufferIfConnecting = false) {
     const encoded = JSON.stringify(payload);
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
@@ -290,6 +303,29 @@ export class MultiplayerClient {
         this.pendingMessages.push(encoded);
       }
     }
+  }
+
+  private handleBinaryMessage(buffer: ArrayBuffer) {
+    const bytes = new Uint8Array(buffer);
+    // Relay frame: [version:1][idLength:1][senderId: idLength][PCM16 LE ...]
+    if (bytes.length < 3 || bytes[0] !== 1) return;
+    const idLength = bytes[1];
+    const pcmOffset = 2 + idLength;
+    if (idLength === 0 || bytes.length <= pcmOffset) return;
+    let fromId = '';
+    for (let i = 0; i < idLength; i++) {
+      fromId += String.fromCharCode(bytes[2 + i]);
+    }
+    const pcmBytes = bytes.length - pcmOffset;
+    const sampleCount = Math.floor(pcmBytes / 2);
+    if (sampleCount === 0) return;
+    const pcm = new Int16Array(sampleCount);
+    for (let i = 0; i < sampleCount; i++) {
+      const lo = bytes[pcmOffset + i * 2];
+      const hi = bytes[pcmOffset + i * 2 + 1];
+      pcm[i] = (hi << 8) | lo;
+    }
+    this.handlers.onVoiceAudio(fromId, pcm);
   }
 
   private handleServerMessage(msg: Record<string, unknown>) {

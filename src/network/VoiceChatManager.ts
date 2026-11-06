@@ -1,18 +1,21 @@
-// Proximity voice chat over a WebRTC mesh, signaling via the game WebSocket.
-// Voice is toggle-to-talk: the caller flips setTalking(true/false) from the
-// in-game mic button, the T key, or the phone. Proximity fade is applied to the
-// playback volume of each remote peer.
+// Proximity voice chat, relayed through the authoritative game WebSocket.
 //
-// Notes on reliability:
-// - Every peer always negotiates a sendable audio m-line. Before the mic is
-//   granted we attach a silent placeholder track, then swap in the real mic
-//   with replaceTrack(). That avoids needing a renegotiation (which is what
-//   used to leave mobile players silent).
-// - A TURN relay is configured because mobile carriers are frequently behind
-//   symmetric NAT/CGNAT, where STUN-only peer connections never connect.
-// - Remote audio is played through <audio> elements (not a Web Audio graph) so
-//   it routes correctly on iOS/Android, where Web Audio output can stay silent
-//   until a gesture and is often suspended in the background.
+// Why a relay instead of a WebRTC mesh: mobile carriers are frequently behind
+// symmetric NAT/CGNAT, where STUN-only peer connections never connect and the
+// free public TURN relays we could reach are either dead or require an account.
+// The game server is already reachable from every player (that is how they are
+// playing), so routing microphone audio through it is the one transport that
+// always works on phones and PCs alike. It also avoids a 20-peer mesh.
+//
+// Audio path:
+//   mic -> AudioContext -> ScriptProcessor -> downsample to 16 kHz mono PCM16
+//        -> binary frame over the game WebSocket -> server fans out to nearby
+//        survivors -> AudioBufferSource -> proximity GainNode -> speakers
+//
+// Voice is toggle-to-talk: setTalking(true/false) comes from the in-game mic
+// button, the T key, or the phone. Nothing is transmitted while not talking.
+// Proximity gain is applied per remote sender, so nearby voices are loud and
+// distant ones fade out.
 
 export interface VoiceSignalData {
   fromId: string;
@@ -28,43 +31,34 @@ export interface VoiceChatCallbacks {
     payload: unknown;
   }) => void;
   sendState: (talking: boolean) => void;
+  sendAudio: (frame: ArrayBuffer) => void;
   getSelfId: () => string | null;
   getRemoteIds: () => string[];
   getDistance: (remoteId: string) => number; // world units
 }
 
+const TARGET_SAMPLE_RATE = 16000;
+const JITTER_BUFFER_SECONDS = 0.09;
 const MAX_RANGE = 1800;
 const FULL_RANGE = 250;
 
-const RTC_CONFIG: RTCConfiguration = {
-  iceServers: [
-    { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302', 'stun:stun.cloudflare.com:3478'] },
-    {
-      urls: [
-        'turn:openrelay.metered.ca:80',
-        'turn:openrelay.metered.ca:80?transport=tcp',
-        'turn:openrelay.metered.ca:443',
-        'turn:openrelay.metered.ca:443?transport=tcp',
-      ],
-      username: 'openrelayproject',
-      credential: 'openrelayproject',
-    },
-  ],
-  iceCandidatePoolSize: 4,
-};
+interface PlaybackState {
+  gain: GainNode;
+  nextTime: number;
+  lastPacketAt: number;
+}
 
 export class VoiceChatManager {
   private callbacks: VoiceChatCallbacks;
   private localStream: MediaStream | null = null;
-  private peers = new Map<string, RTCPeerConnection>();
-  private transceivers = new Map<string, RTCRtpTransceiver>();
-  private pendingIce = new Map<string, RTCIceCandidateInit[]>();
-  private remoteAudio = new Map<string, HTMLAudioElement>();
+  private sourceNode: MediaStreamAudioSourceNode | null = null;
+  private processor: ScriptProcessorNode | null = null;
+  private silentGain: GainNode | null = null;
   private audioCtx: AudioContext | null = null;
-  private placeholderStream: MediaStream | null = null;
   private talking = false;
   private enabled = false;
   private talkingState = new Map<string, boolean>();
+  private playback = new Map<string, PlaybackState>();
 
   constructor(callbacks: VoiceChatCallbacks) {
     this.callbacks = callbacks;
@@ -91,14 +85,9 @@ export class VoiceChatManager {
         video: false,
       });
       this.localStream = stream;
-      this.applyTrackState();
+      this.attachCaptureGraph();
       this.enabled = true;
-      // Peers may already exist (created by the offer/answer exchange before
-      // mic permission finished). Swap the silent placeholder for the real
-      // microphone on every one of them.
-      for (const [remoteId, pc] of this.peers) {
-        this.attachLocalTrack(remoteId, pc);
-      }
+      this.applyTrackState();
       await this.resumeAudio();
       return true;
     } catch (e) {
@@ -108,151 +97,69 @@ export class VoiceChatManager {
   }
 
   public disable() {
+    try {
+      if (this.processor) {
+        this.processor.onaudioprocess = null;
+        this.processor.disconnect();
+      }
+    } catch {
+      /* ignore */
+    }
+    try {
+      this.sourceNode?.disconnect();
+    } catch {
+      /* ignore */
+    }
+    try {
+      this.silentGain?.disconnect();
+    } catch {
+      /* ignore */
+    }
+    this.processor = null;
+    this.sourceNode = null;
+    this.silentGain = null;
     this.localStream?.getTracks().forEach((t) => t.stop());
     this.localStream = null;
     this.enabled = false;
     this.talking = false;
-    for (const pc of this.peers.values()) pc.close();
-    this.peers.clear();
-    this.transceivers.clear();
-    this.pendingIce.clear();
-    this.clearRemoteAudio();
+    this.talkingState.clear();
+    for (const state of this.playback.values()) {
+      try {
+        state.gain.disconnect();
+      } catch {
+        /* ignore */
+      }
+    }
+    this.playback.clear();
     try {
       void this.audioCtx?.close();
     } catch {
       /* ignore */
     }
     this.audioCtx = null;
-    this.placeholderStream = null;
   }
 
-  public ensurePeer(remoteId: string) {
-    if (this.peers.has(remoteId)) return this.peers.get(remoteId)!;
-    const selfId = this.callbacks.getSelfId();
-    if (!selfId || remoteId === selfId) return null;
-    const pc = new RTCPeerConnection(RTC_CONFIG);
-    const track = this.localStream?.getAudioTracks()[0] ?? this.ensurePlaceholderTrack();
-    // Always negotiate an audio m-line that is able to send. A silent
-    // placeholder track keeps the m-line sendrecv until the real mic arrives,
-    // so replaceTrack() alone is enough to start transmitting.
-    const transceiver = track
-      ? pc.addTransceiver(track, {
-          direction: 'sendrecv',
-          streams: this.localStream ? [this.localStream] : [],
-        })
-      : pc.addTransceiver('audio', { direction: 'sendrecv' });
-    this.transceivers.set(remoteId, transceiver);
+  /** Kept for API compatibility; the relay does not need per-peer setup. */
+  public ensurePeer(_remoteId: string) {
+    return null;
+  }
 
-    pc.ontrack = (ev) => {
-      const stream = ev.streams[0] ?? new MediaStream([ev.track]);
-      this.attachRemoteAudio(remoteId, stream);
-    };
-    pc.onicecandidate = (ev) => {
-      if (ev.candidate) {
-        this.callbacks.sendSignal({
-          targetId: remoteId,
-          kind: 'ice',
-          payload: ev.candidate.toJSON(),
-        });
-      }
-    };
-    pc.oniceconnectionstatechange = () => {
-      console.info('[Voice] ICE', remoteId.slice(0, 6), pc.iceConnectionState);
-      if (pc.iceConnectionState === 'failed') {
-        try {
-          pc.restartIce();
-        } catch {
-          /* ignore */
-        }
-      }
-    };
-    pc.onconnectionstatechange = () => {
-      console.info('[Voice] PC', remoteId.slice(0, 6), pc.connectionState);
-      if (pc.connectionState === 'failed') {
-        try {
-          pc.restartIce();
-        } catch {
-          /* ignore */
-        }
-      }
-    };
-    this.peers.set(remoteId, pc);
-
-    // Initiator: lower id creates the offer (avoids offer glare). Using
-    // onnegotiationneeded also lets us recover after a failed ICE connection.
-    if (selfId < remoteId) {
-      pc.onnegotiationneeded = () => {
-        if (pc.signalingState !== 'stable') return;
-        pc.setLocalDescription()
-          .then(() => {
-            this.callbacks.sendSignal({
-              targetId: remoteId,
-              kind: 'offer',
-              payload: pc.localDescription,
-            });
-          })
-          .catch((e) => console.warn('VoiceChat offer error', e));
-      };
-    }
-    return pc;
+  /** Kept for API compatibility; WebRTC signaling is no longer used. */
+  public handleSignal(_data: VoiceSignalData) {
+    /* no-op: voice is relayed over the game WebSocket */
   }
 
   public removePeer(remoteId: string) {
-    const pc = this.peers.get(remoteId);
-    if (pc) {
-      pc.close();
-      this.peers.delete(remoteId);
-    }
-    this.transceivers.delete(remoteId);
-    this.pendingIce.delete(remoteId);
-    this.talkingState.delete(remoteId);
-    this.removeRemoteAudio(remoteId);
-  }
-
-  public handleSignal(data: VoiceSignalData) {
-    const { fromId, kind, payload } = data;
-    const pc = this.ensurePeer(fromId);
-    if (!pc) return;
-    if (kind === 'offer') {
-      pc.setRemoteDescription(new RTCSessionDescription(payload as RTCSessionDescriptionInit))
-        .then(() => this.flushPendingIce(fromId, pc))
-        .then(() => pc.createAnswer())
-        .then((answer) => pc.setLocalDescription(answer))
-        .then(() => {
-          this.callbacks.sendSignal({
-            targetId: fromId,
-            kind: 'answer',
-            payload: pc.localDescription,
-          });
-        })
-        .catch((e) => console.warn('VoiceChat answer error', e));
-    } else if (kind === 'answer') {
-      pc.setRemoteDescription(new RTCSessionDescription(payload as RTCSessionDescriptionInit))
-        .then(() => this.flushPendingIce(fromId, pc))
-        .catch((e) => console.warn('VoiceChat setRemote answer error', e));
-    } else if (kind === 'ice') {
-      const candidate = payload as RTCIceCandidateInit;
-      if (!pc.remoteDescription) {
-        const queue = this.pendingIce.get(fromId) ?? [];
-        queue.push(candidate);
-        this.pendingIce.set(fromId, queue);
-        return;
+    const state = this.playback.get(remoteId);
+    if (state) {
+      try {
+        state.gain.disconnect();
+      } catch {
+        /* ignore */
       }
-      pc.addIceCandidate(new RTCIceCandidate(candidate)).catch(() => {
-        /* ignore */
-      });
+      this.playback.delete(remoteId);
     }
-  }
-
-  private flushPendingIce(remoteId: string, pc: RTCPeerConnection) {
-    const queue = this.pendingIce.get(remoteId);
-    if (!queue) return;
-    this.pendingIce.delete(remoteId);
-    for (const candidate of queue) {
-      pc.addIceCandidate(new RTCIceCandidate(candidate)).catch(() => {
-        /* ignore */
-      });
-    }
+    this.talkingState.delete(remoteId);
   }
 
   public setTalking(talking: boolean) {
@@ -271,6 +178,10 @@ export class VoiceChatManager {
 
   public setPeerTalking(remoteId: string, talking: boolean) {
     this.talkingState.set(remoteId, talking);
+    if (!talking) {
+      const state = this.playback.get(remoteId);
+      if (state) state.nextTime = 0;
+    }
   }
 
   public getTalkingState(remoteId: string) {
@@ -279,41 +190,90 @@ export class VoiceChatManager {
 
   /**
    * Must be called from a real user gesture. Browsers (especially mobile)
-   * block audio playback and keep AudioContexts suspended until then.
+   * keep AudioContexts suspended until then.
    */
   public async resumeAudio() {
-    if (this.audioCtx?.state === 'suspended') {
+    const ctx = this.audioCtx;
+    if (ctx?.state === 'suspended') {
       try {
-        await this.audioCtx.resume();
+        await ctx.resume();
       } catch {
         /* ignore */
       }
     }
-    for (const audio of this.remoteAudio.values()) {
-      try {
-        await audio.play();
-      } catch {
-        /* blocked until the next gesture; retried on every gesture */
-      }
+  }
+
+  /** Called for every relayed PCM frame from another survivor. */
+  public handleAudio(fromId: string, pcm: Int16Array) {
+    if (pcm.length < 16) return;
+    const ctx = this.audioCtx ?? this.ensureAudioContext();
+    if (!ctx) return;
+    if (ctx.state === 'suspended') {
+      void this.resumeAudio();
     }
+    const now = ctx.currentTime;
+
+    let state = this.playback.get(fromId);
+    if (!state) {
+      const gain = ctx.createGain();
+      gain.gain.value = this.computeGain(this.callbacks.getDistance(fromId));
+      gain.connect(ctx.destination);
+      state = { gain, nextTime: now + JITTER_BUFFER_SECONDS, lastPacketAt: now };
+      this.playback.set(fromId, state);
+    }
+    state.lastPacketAt = now;
+
+    const samples = int16ToFloat32(pcm);
+    const buffer = ctx.createBuffer(1, samples.length, TARGET_SAMPLE_RATE);
+    buffer.getChannelData(0).set(samples);
+
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    source.connect(state.gain);
+
+    const targetGain = this.computeGain(this.callbacks.getDistance(fromId));
+    try {
+      state.gain.gain.setTargetAtTime(targetGain, now, 0.06);
+    } catch {
+      state.gain.gain.value = targetGain;
+    }
+
+    // If we under-ran (packet loss / tab stall) or drifted too far behind,
+    // restart the jitter buffer instead of playing late audio.
+    let startAt = state.nextTime;
+    if (startAt < now + 0.01 || startAt > now + 0.6) {
+      startAt = now + JITTER_BUFFER_SECONDS;
+    }
+    try {
+      source.start(startAt);
+    } catch {
+      return;
+    }
+    state.nextTime = startAt + buffer.duration;
   }
 
   public updateProximity() {
-    if (this.audioCtx?.state === 'suspended') {
+    const ctx = this.audioCtx;
+    if (!ctx) return;
+    if (ctx.state === 'suspended') {
       void this.resumeAudio();
     }
-    for (const [id, audio] of this.remoteAudio) {
-      const dist = this.callbacks.getDistance(id);
-      const gain = this.computeGain(dist);
-      if (audio.paused) {
-        void audio.play().catch(() => {
-          /* retried on the next gesture */
-        });
-      }
+    const now = ctx.currentTime;
+    for (const [id, state] of this.playback) {
+      const targetGain = this.computeGain(this.callbacks.getDistance(id));
       try {
-        audio.volume = gain;
+        state.gain.gain.setTargetAtTime(targetGain, now, 0.08);
       } catch {
-        /* iOS may ignore volume; audio still plays */
+        state.gain.gain.value = targetGain;
+      }
+      // Drop playback nodes for peers who stopped transmitting long ago.
+      if (now - state.lastPacketAt > 6) {
+        try {
+          state.gain.disconnect();
+        } catch {
+          /* ignore */
+        }
+        this.playback.delete(id);
       }
     }
   }
@@ -331,26 +291,39 @@ export class VoiceChatManager {
       .forEach((track) => (track.enabled = this.talking));
   }
 
-  private attachLocalTrack(remoteId: string, pc: RTCPeerConnection) {
-    const track = this.localStream?.getAudioTracks()[0];
-    if (!track) return;
-    const transceiver = this.transceivers.get(remoteId);
-    if (transceiver) {
-      if (transceiver.sender.track !== track) {
-        void transceiver.sender.replaceTrack(track).catch(() => {
-          /* ignore */
-        });
-      }
-      try {
-        transceiver.direction = 'sendrecv';
-      } catch {
-        /* ignore */
-      }
+  private attachCaptureGraph() {
+    const ctx = this.audioCtx;
+    if (!ctx || !this.localStream) return;
+    try {
+      this.sourceNode = ctx.createMediaStreamSource(this.localStream);
+    } catch (e) {
+      console.warn('VoiceChat: could not open mic graph', e);
       return;
     }
-    if (!pc.getSenders().some((sender) => sender.track === track) && this.localStream) {
-      pc.addTrack(track, this.localStream);
-    }
+    const processor = ctx.createScriptProcessor(2048, 1, 1);
+    this.processor = processor;
+    const silent = ctx.createGain();
+    silent.gain.value = 0;
+    this.silentGain = silent;
+
+    processor.onaudioprocess = (ev) => {
+      if (!this.enabled || !this.talking) return;
+      const input = ev.inputBuffer.getChannelData(0);
+      if (!input || input.length === 0) return;
+      const down = downsampleBuffer(input, ctx.sampleRate, TARGET_SAMPLE_RATE);
+      if (down.length === 0) return;
+      const pcm = floatToInt16(down);
+      const frame = new Uint8Array(1 + pcm.byteLength);
+      frame[0] = 1; // relay frame version
+      frame.set(new Uint8Array(pcm.buffer, pcm.byteOffset, pcm.byteLength), 1);
+      this.callbacks.sendAudio(frame.buffer);
+    };
+
+    // The processor must be connected to the destination to be pulled, but the
+    // zero-gain node keeps the local mic from being played back to the player.
+    this.sourceNode.connect(processor);
+    processor.connect(silent);
+    silent.connect(ctx.destination);
   }
 
   private ensureAudioContext(): AudioContext | null {
@@ -373,60 +346,40 @@ export class VoiceChatManager {
     }
     return this.audioCtx;
   }
+}
 
-  /**
-   * Silent audio track used to keep the negotiated m-line sendrecv before the
-   * player grants microphone access.
-   */
-  private ensurePlaceholderTrack(): MediaStreamTrack | null {
-    if (!this.placeholderStream) {
-      const ctx = this.ensureAudioContext();
-      if (!ctx) return null;
-      try {
-        const dest = ctx.createMediaStreamDestination();
-        this.placeholderStream = dest.stream;
-      } catch {
-        return null;
-      }
-    }
-    return this.placeholderStream.getAudioTracks()[0] ?? null;
+function downsampleBuffer(
+  input: Float32Array,
+  inRate: number,
+  outRate: number
+): Float32Array {
+  if (inRate === outRate) return input.slice();
+  const ratio = inRate / outRate;
+  const outLength = Math.max(1, Math.floor(input.length / ratio));
+  const out = new Float32Array(outLength);
+  for (let i = 0; i < outLength; i++) {
+    const start = Math.floor(i * ratio);
+    const end = Math.min(input.length, Math.floor((i + 1) * ratio));
+    let sum = 0;
+    for (let j = start; j < end; j++) sum += input[j];
+    out[i] = sum / Math.max(1, end - start);
   }
+  return out;
+}
 
-  private attachRemoteAudio(remoteId: string, stream: MediaStream) {
-    let audio = this.remoteAudio.get(remoteId);
-    if (!audio) {
-      audio = document.createElement('audio');
-      audio.autoplay = true;
-      audio.setAttribute('playsinline', 'true');
-      audio.setAttribute('webkit-playsinline', 'true');
-      audio.style.display = 'none';
-      document.body.appendChild(audio);
-      this.remoteAudio.set(remoteId, audio);
-    }
-    if (audio.srcObject !== stream) audio.srcObject = stream;
-    audio.volume = this.computeGain(this.callbacks.getDistance(remoteId));
-    const playAttempt = audio.play();
-    if (playAttempt) {
-      playAttempt.catch(() => {
-        /* retried on the next user gesture via resumeAudio() */
-      });
-    }
+function floatToInt16(input: Float32Array): Int16Array {
+  const out = new Int16Array(input.length);
+  for (let i = 0; i < input.length; i++) {
+    const s = Math.max(-1, Math.min(1, input[i]));
+    out[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
   }
+  return out;
+}
 
-  private removeRemoteAudio(remoteId: string) {
-    const audio = this.remoteAudio.get(remoteId);
-    if (!audio) return;
-    this.remoteAudio.delete(remoteId);
-    try {
-      audio.pause();
-      audio.srcObject = null;
-      audio.remove();
-    } catch {
-      /* ignore */
-    }
+function int16ToFloat32(input: Int16Array): Float32Array {
+  const out = new Float32Array(input.length);
+  for (let i = 0; i < input.length; i++) {
+    out[i] = input[i] / 0x8000;
   }
-
-  private clearRemoteAudio() {
-    for (const id of [...this.remoteAudio.keys()]) this.removeRemoteAudio(id);
-  }
+  return out;
 }
