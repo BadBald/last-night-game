@@ -60,6 +60,14 @@ export class SoundEngine {
   private breathLfo: OscillatorNode | null = null;
   private breathExertion = 0.12;
   private nightGain: GainNode | null = null;
+  private nightTimer: number | null = null;
+  private nightCricketNext: number[] = [];
+  private nightEventNext: Record<string, number> = {};
+  private readonly nightCricketVoices = [
+    { pan: -0.72, freq: 4260, period: 0.95 },
+    { pan: 0.64, freq: 4710, period: 1.18 },
+    { pan: -0.18, freq: 5080, period: 1.42 },
+  ];
 
   private masterVal = 0.8;
   private musicVal = 0.7;
@@ -253,25 +261,28 @@ export class SoundEngine {
   private setupNightAmbience() {
     if (!this.ctx || !this.noiseBuffer || this.nightGain) return;
     const ctx = this.ctx;
+
     const bus = ctx.createGain();
     bus.gain.value = 0;
     bus.connect(ctx.destination);
+    this.nightGain = bus;
 
-    // Low wind bed drifting through the streets.
+    // Continuous low wind body (not a whistle): soft filtered noise that
+    // breathes slowly under everything else.
     const wind = ctx.createBufferSource();
     wind.buffer = this.noiseBuffer;
     wind.loop = true;
     const windLp = ctx.createBiquadFilter();
     windLp.type = 'lowpass';
-    windLp.frequency.value = 310;
-    windLp.Q.value = 0.4;
+    windLp.frequency.value = 240;
+    windLp.Q.value = 0.3;
     const windGain = ctx.createGain();
-    windGain.gain.value = 0.5;
+    windGain.gain.value = 0.04;
     const windLfo = ctx.createOscillator();
     windLfo.type = 'sine';
-    windLfo.frequency.value = 0.07;
+    windLfo.frequency.value = 0.06;
     const windLfoDepth = ctx.createGain();
-    windLfoDepth.gain.value = 0.24;
+    windLfoDepth.gain.value = 0.02;
     windLfo.connect(windLfoDepth);
     windLfoDepth.connect(windGain.gain);
     wind.connect(windLp);
@@ -280,51 +291,378 @@ export class SoundEngine {
     wind.start();
     windLfo.start();
 
-    // Distant crickets: tiny high tones with a fast tremolo chirp, drifting in
-    // and out on a slow fade so they never become a constant hum.
-    for (const [freq, rate, drift] of [
-      [4180, 6.4, 0.0],
-      [4620, 5.1, 0.5],
-      [5150, 7.3, 1.0],
-    ] as const) {
-      const osc = ctx.createOscillator();
-      osc.type = 'triangle';
-      osc.frequency.value = freq;
-      const tone = ctx.createBiquadFilter();
-      tone.type = 'bandpass';
-      tone.frequency.value = freq;
-      tone.Q.value = 12;
+    // Low urban hum far below the streets.
+    const hum = ctx.createOscillator();
+    hum.type = 'sine';
+    hum.frequency.value = 54;
+    const humG = ctx.createGain();
+    humG.gain.value = 0.03;
+    hum.connect(humG);
+    humG.connect(bus);
+    hum.start();
 
-      const chirp = ctx.createGain();
-      chirp.gain.value = 0;
-      const trem = ctx.createOscillator();
-      trem.type = 'sine';
-      trem.frequency.value = rate;
-      const tremDepth = ctx.createGain();
-      tremDepth.gain.value = 0.26;
-      trem.connect(tremDepth);
-      tremDepth.connect(chirp.gain);
+    const hum2 = ctx.createOscillator();
+    hum2.type = 'sine';
+    hum2.frequency.value = 81;
+    const hum2G = ctx.createGain();
+    hum2G.gain.value = 0.012;
+    hum2.connect(hum2G);
+    hum2G.connect(bus);
+    hum2.start();
 
-      const fade = ctx.createGain();
-      fade.gain.value = 0.5;
-      const slow = ctx.createOscillator();
-      slow.type = 'sine';
-      slow.frequency.value = 0.1 + drift * 0.035;
-      const slowDepth = ctx.createGain();
-      slowDepth.gain.value = 0.5;
-      slow.connect(slowDepth);
-      slowDepth.connect(fade.gain);
+    // Each cricket voice keeps its own tempo, so chirps sound natural.
+    this.nightCricketNext = this.nightCricketVoices.map(
+      () => ctx.currentTime + Math.random() * 2
+    );
+    this.nightEventNext = {};
+    this.startNightScheduler();
+  }
 
-      osc.connect(tone);
-      tone.connect(chirp);
-      chirp.connect(fade);
-      fade.connect(bus);
-      osc.start();
-      trem.start();
-      slow.start();
+  private startNightScheduler() {
+    if (typeof window === 'undefined' || this.nightTimer !== null) return;
+    const tick = () => {
+      this.nightTimer = window.setTimeout(tick, 650 + Math.random() * 850);
+      this.updateNightAmbience();
+    };
+    this.nightTimer = window.setTimeout(tick, 350);
+  }
+
+  private updateNightAmbience() {
+    const ctx = this.ctx;
+    if (!ctx || this.muted || ctx.state !== 'running') return;
+    const amb = this.masterVal * this.ambientVal;
+    if (amb <= 0.002) return;
+    const now = ctx.currentTime;
+
+    // Crickets: short pulse trains on independent rhythms.
+    for (let i = 0; i < this.nightCricketVoices.length; i++) {
+      const voice = this.nightCricketVoices[i];
+      if (now >= (this.nightCricketNext[i] ?? 0)) {
+        this.playCricketChirp(now + Math.random() * 0.08, voice.pan, voice.freq);
+        this.nightCricketNext[i] = now + voice.period * (0.75 + Math.random() * 0.7);
+      }
     }
 
-    this.nightGain = bus;
+    // Sparse distant life.
+    this.maybeNightEvent('gust', now, 14, 30, () =>
+      this.playWindGust(now + Math.random() * 0.5)
+    );
+    this.maybeNightEvent('owl', now, 40, 80, () =>
+      this.playOwlHoot(now + Math.random() * 0.6)
+    );
+    this.maybeNightEvent('dog', now, 55, 110, () =>
+      this.playDistantDog(now + Math.random() * 0.6)
+    );
+    this.maybeNightEvent('creak', now, 35, 75, () =>
+      this.playDistantCreak(now + Math.random() * 0.6)
+    );
+  }
+
+  private maybeNightEvent(
+    key: string,
+    now: number,
+    minGap: number,
+    maxGap: number,
+    fire: () => void
+  ) {
+    const next = this.nightEventNext[key];
+    if (next === undefined) {
+      this.nightEventNext[key] = now + 6 + Math.random() * 10;
+      return;
+    }
+    if (now < next) return;
+    this.nightEventNext[key] = now + minGap + Math.random() * (maxGap - minGap);
+    fire();
+  }
+
+  private playCricketChirp(when: number, pan: number, baseFreq: number) {
+    const ctx = this.ctx;
+    const bus = this.nightGain;
+    if (!ctx || !bus) return;
+
+    const panner = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
+    if (panner) panner.pan.value = pan;
+    const lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 6800;
+    const out = ctx.createGain();
+    out.gain.value = 0.02 + Math.random() * 0.008;
+
+    if (panner) {
+      lp.connect(panner);
+      panner.connect(out);
+    } else {
+      lp.connect(out);
+    }
+    out.connect(bus);
+
+    const pulses = 3 + Math.floor(Math.random() * 3);
+    const gap = 0.03 + Math.random() * 0.012;
+    for (let i = 0; i < pulses; i++) {
+      const t = when + i * gap;
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(baseFreq * (0.99 + Math.random() * 0.02), t);
+      osc.frequency.exponentialRampToValueAtTime(baseFreq * 0.93, t + 0.022);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(1, t + 0.003);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.026);
+      osc.connect(g);
+      g.connect(lp);
+      osc.start(t);
+      osc.stop(t + 0.03);
+      osc.onended = () => {
+        try {
+          osc.disconnect();
+          g.disconnect();
+        } catch {}
+      };
+    }
+
+    if (typeof window !== 'undefined') {
+      window.setTimeout(
+        () => {
+          try {
+            lp.disconnect();
+            out.disconnect();
+            panner?.disconnect();
+          } catch {}
+        },
+        Math.max(0, (when - ctx.currentTime + pulses * gap + 0.3) * 1000)
+      );
+    }
+  }
+
+  private playWindGust(when: number) {
+    const ctx = this.ctx;
+    const bus = this.nightGain;
+    if (!ctx || !this.whiteNoiseBuffer || !bus) return;
+
+    const src = ctx.createBufferSource();
+    src.buffer = this.whiteNoiseBuffer;
+    src.loop = true;
+    const lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.setValueAtTime(220, when);
+    lp.frequency.exponentialRampToValueAtTime(520, when + 1.1);
+    lp.frequency.exponentialRampToValueAtTime(180, when + 2.8);
+    lp.Q.value = 0.5;
+    const g = ctx.createGain();
+    const peak = 0.05 + Math.random() * 0.03;
+    g.gain.setValueAtTime(0.0001, when);
+    g.gain.exponentialRampToValueAtTime(peak, when + 0.9);
+    g.gain.exponentialRampToValueAtTime(0.0001, when + 3.0);
+    src.connect(lp);
+    lp.connect(g);
+    g.connect(bus);
+    src.start(when);
+    src.stop(when + 3.1);
+    src.onended = () => {
+      try {
+        src.disconnect();
+        lp.disconnect();
+        g.disconnect();
+      } catch {}
+    };
+  }
+
+  private playOwlHoot(when: number) {
+    const ctx = this.ctx;
+    const bus = this.nightGain;
+    if (!ctx || !bus) return;
+
+    const panner = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
+    if (panner) panner.pan.value = Math.random() * 1.4 - 0.7;
+    const lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 900;
+    const out = ctx.createGain();
+    out.gain.value = 0.055;
+    if (panner) {
+      lp.connect(panner);
+      panner.connect(out);
+    } else {
+      lp.connect(out);
+    }
+    out.connect(bus);
+
+    const base = 330 + Math.random() * 70;
+    const hoots = [
+      { at: 0, dur: 0.42, hz: base },
+      { at: 0.62, dur: 0.3, hz: base * 1.04 },
+      { at: 0.98, dur: 0.26, hz: base * 1.02 },
+    ];
+    for (const h of hoots) {
+      const t = when + h.at;
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(h.hz, t);
+      osc.frequency.linearRampToValueAtTime(h.hz * 0.94, t + h.dur);
+      const vib = ctx.createOscillator();
+      vib.type = 'sine';
+      vib.frequency.value = 5.5;
+      const vibG = ctx.createGain();
+      vibG.gain.value = 2.2;
+      vib.connect(vibG);
+      vibG.connect(osc.frequency);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(1, t + 0.08);
+      g.gain.setValueAtTime(1, t + h.dur * 0.6);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + h.dur);
+      osc.connect(g);
+      g.connect(lp);
+      osc.start(t);
+      vib.start(t);
+      osc.stop(t + h.dur + 0.02);
+      vib.stop(t + h.dur + 0.02);
+      osc.onended = () => {
+        try {
+          osc.disconnect();
+          vib.disconnect();
+          vibG.disconnect();
+          g.disconnect();
+        } catch {}
+      };
+    }
+
+    if (typeof window !== 'undefined') {
+      window.setTimeout(
+        () => {
+          try {
+            lp.disconnect();
+            out.disconnect();
+            panner?.disconnect();
+          } catch {}
+        },
+        Math.max(0, (when - ctx.currentTime + 1.6) * 1000)
+      );
+    }
+  }
+
+  private playDistantDog(when: number) {
+    const ctx = this.ctx;
+    const bus = this.nightGain;
+    if (!ctx || !this.whiteNoiseBuffer || !bus) return;
+
+    const panner = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
+    if (panner) panner.pan.value = Math.random() * 1.6 - 0.8;
+    const lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 1400;
+    const out = ctx.createGain();
+    out.gain.value = 0.05;
+    if (panner) {
+      lp.connect(panner);
+      panner.connect(out);
+    } else {
+      lp.connect(out);
+    }
+    out.connect(bus);
+
+    const barks = 2 + Math.floor(Math.random() * 3);
+    for (let i = 0; i < barks; i++) {
+      const t = when + i * (0.19 + Math.random() * 0.09);
+
+      const n = ctx.createBufferSource();
+      n.buffer = this.whiteNoiseBuffer;
+      const bp = ctx.createBiquadFilter();
+      bp.type = 'bandpass';
+      bp.frequency.setValueAtTime(950, t);
+      bp.frequency.exponentialRampToValueAtTime(520, t + 0.1);
+      bp.Q.value = 1.3;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(1, t + 0.012);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
+      n.connect(bp);
+      bp.connect(g);
+      g.connect(lp);
+      n.start(t, Math.random() * 1.2, 0.14);
+      n.onended = () => {
+        try {
+          n.disconnect();
+          bp.disconnect();
+          g.disconnect();
+        } catch {}
+      };
+
+      const th = ctx.createOscillator();
+      th.type = 'sine';
+      th.frequency.setValueAtTime(150, t);
+      th.frequency.exponentialRampToValueAtTime(70, t + 0.09);
+      const tg = ctx.createGain();
+      tg.gain.setValueAtTime(0.5, t);
+      tg.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+      th.connect(tg);
+      tg.connect(lp);
+      th.start(t);
+      th.stop(t + 0.11);
+      th.onended = () => {
+        try {
+          th.disconnect();
+          tg.disconnect();
+        } catch {}
+      };
+    }
+
+    if (typeof window !== 'undefined') {
+      window.setTimeout(
+        () => {
+          try {
+            lp.disconnect();
+            out.disconnect();
+            panner?.disconnect();
+          } catch {}
+        },
+        Math.max(0, (when - ctx.currentTime + barks * 0.28 + 0.4) * 1000)
+      );
+    }
+  }
+
+  private playDistantCreak(when: number) {
+    const ctx = this.ctx;
+    const bus = this.nightGain;
+    if (!ctx || !this.whiteNoiseBuffer || !bus) return;
+
+    const panner = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
+    if (panner) panner.pan.value = Math.random() * 1.7 - 0.85;
+    const bp = ctx.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.setValueAtTime(1500, when);
+    bp.frequency.linearRampToValueAtTime(2600, when + 0.5);
+    bp.Q.value = 9;
+    const out = ctx.createGain();
+    out.gain.value = 0.03;
+    if (panner) {
+      bp.connect(panner);
+      panner.connect(out);
+    } else {
+      bp.connect(out);
+    }
+    out.connect(bus);
+
+    const src = ctx.createBufferSource();
+    src.buffer = this.whiteNoiseBuffer;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, when);
+    g.gain.exponentialRampToValueAtTime(1, when + 0.12);
+    g.gain.setValueAtTime(1, when + 0.5);
+    g.gain.exponentialRampToValueAtTime(0.0001, when + 0.75);
+    src.connect(bp);
+    bp.connect(g);
+    g.connect(out);
+    src.start(when, Math.random() * 1.0, 0.8);
+    src.onended = () => {
+      try {
+        src.disconnect();
+        bp.disconnect();
+        g.disconnect();
+        out.disconnect();
+        panner?.disconnect();
+      } catch {}
+    };
   }
 
   private setupHelicopterRotor() {
@@ -448,7 +786,7 @@ export class SoundEngine {
       this.breathGain.gain.setTargetAtTime(targetBreath, now, 0.7);
     }
     if (this.nightGain) {
-      this.nightGain.gain.setTargetAtTime(effAmb * 0.035, now, 1.0);
+      this.nightGain.gain.setTargetAtTime(effAmb, now, 0.8);
     }
   }
 
