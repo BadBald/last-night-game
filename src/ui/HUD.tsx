@@ -781,7 +781,7 @@ export const HUD: React.FC<HUDProps> = ({
                 ) : (
                   <MicOff className="w-4 h-4 shrink-0 text-[#9c8b79]" />
                 )}
-                <span>{snap.online.selfTalking ? 'Talking' : 'Mic [T]'}</span>
+                <span className="hidden lg:inline">{snap.online.selfTalking ? 'Talking' : 'Mic [T]'}</span>
               </button>
             )}
 

@@ -33,8 +33,8 @@ export interface VoiceChatCallbacks {
   getDistance: (remoteId: string) => number; // world units
 }
 
-const MAX_RANGE = 900;
-const FULL_RANGE = 150;
+const MAX_RANGE = 1800;
+const FULL_RANGE = 250;
 
 const RTC_CONFIG: RTCConfiguration = {
   iceServers: [
