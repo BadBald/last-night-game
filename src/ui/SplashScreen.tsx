@@ -5,10 +5,10 @@ interface SplashScreenProps {
 }
 
 // A minimal two-beat splash shown once on first load, before the title menu.
-// Beat 1: the game's helipad "H" emblem on pure blackness, with a 2D
-// survivor walking around it in the dark, his flashlight sweeping the H.
-// Beat 2: the Clatter Games studio logo.
-// No game logic is touched; this is a pure overlay.
+// Beat 1 (~5.5s): "LAST NIGHT" with the red-circled H emblem, survivors
+// walking toward the H in the dark with their flashlights.
+// Beat 2 (~1.5s): the Clatter Games studio logo.
+// Total ~7s. No game logic is touched; this is a pure overlay.
 export function SplashScreen({ onComplete }: SplashScreenProps) {
   const [phase, setPhase] = useState<0 | 1 | 2>(0); // 0 = H, 1 = studio, 2 = done
   const [visible, setVisible] = useState(false);
@@ -16,16 +16,16 @@ export function SplashScreen({ onComplete }: SplashScreenProps) {
 
   useEffect(() => {
     const t0 = window.setTimeout(() => setVisible(true), 60);
-    const t1 = window.setTimeout(() => setVisible(false), 2000);
+    const t1 = window.setTimeout(() => setVisible(false), 5200);
     const t2 = window.setTimeout(() => {
       setPhase(1);
       setVisible(true);
-    }, 2300);
-    const t3 = window.setTimeout(() => setVisible(false), 4200);
+    }, 5500);
+    const t3 = window.setTimeout(() => setVisible(false), 6700);
     const t4 = window.setTimeout(() => {
       setPhase(2);
       onComplete();
-    }, 4600);
+    }, 7000);
 
     return () => {
       window.clearTimeout(t0);
@@ -36,7 +36,7 @@ export function SplashScreen({ onComplete }: SplashScreenProps) {
     };
   }, [onComplete]);
 
-  // Orbiting survivor + flashlight, only during beat 1.
+  // Survivors walking toward the red-circled H in the dark.
   useEffect(() => {
     if (phase !== 0) return;
     const canvas = canvasRef.current;
@@ -51,7 +51,19 @@ export function SplashScreen({ onComplete }: SplashScreenProps) {
     resize();
     window.addEventListener('resize', resize);
 
-    let angle = 0;
+    // Spawn a handful of survivors at the edges.
+    const makeSurvivor = (w: number, h: number) => {
+      const side = Math.floor(Math.random() * 4);
+      let x = 0, y = 0;
+      if (side === 0) { x = Math.random() * w; y = -20; }
+      else if (side === 1) { x = w + 20; y = Math.random() * h; }
+      else if (side === 2) { x = Math.random() * w; y = h + 20; }
+      else { x = -20; y = Math.random() * h; }
+      return { x, y, speed: 0.9 + Math.random() * 0.6 };
+    };
+
+    const survivors = Array.from({ length: 6 }, () => makeSurvivor(canvas.width, canvas.height));
+
     let raf = 0;
     const draw = () => {
       const w = canvas.width;
@@ -59,43 +71,55 @@ export function SplashScreen({ onComplete }: SplashScreenProps) {
       ctx.clearRect(0, 0, w, h);
       const cx = w / 2;
       const cy = h / 2;
-      const orbit = Math.min(w, h) * 0.26;
-      angle += 0.013;
 
-      const px = cx + Math.cos(angle) * orbit;
-      const py = cy + Math.sin(angle) * orbit;
+      for (const s of survivors) {
+        const dx = cx - s.x;
+        const dy = cy - s.y;
+        const dist = Math.hypot(dx, dy) || 1;
+        s.x += (dx / dist) * s.speed;
+        s.y += (dy / dist) * s.speed;
 
-      // Flashlight beam pointing from the survivor toward the H.
-      const beamLen = orbit * 0.95;
-      const beamAngle = Math.atan2(cy - py, cx - px);
-      ctx.save();
-      ctx.translate(px, py);
-      ctx.rotate(beamAngle);
-      const grad = ctx.createRadialGradient(0, 0, 4, 0, 0, beamLen);
-      grad.addColorStop(0, 'rgba(250, 240, 200, 0.6)');
-      grad.addColorStop(0.6, 'rgba(250, 240, 200, 0.18)');
-      grad.addColorStop(1, 'rgba(250, 240, 200, 0)');
-      ctx.fillStyle = grad;
-      ctx.beginPath();
-      ctx.moveTo(0, 0);
-      ctx.arc(0, 0, beamLen, -0.32, 0.32);
-      ctx.closePath();
-      ctx.fill();
-      ctx.restore();
+        // Respawn when reaching the center.
+        if (dist < 30) {
+          const ns = makeSurvivor(w, h);
+          s.x = ns.x;
+          s.y = ns.y;
+          s.speed = ns.speed;
+        }
 
-      // Survivor body (top-down): jacket dot + head.
-      ctx.beginPath();
-      ctx.arc(px, py, 9, 0, Math.PI * 2);
-      ctx.fillStyle = '#9f1d22';
-      ctx.fill();
-      ctx.strokeStyle = '#f8fafc';
-      ctx.lineWidth = 2;
-      ctx.stroke();
+        const beamAngle = Math.atan2(dy, dx);
+        const beamLen = 70;
 
-      ctx.beginPath();
-      ctx.arc(px, py, 3.5, 0, Math.PI * 2);
-      ctx.fillStyle = '#f8fafc';
-      ctx.fill();
+        // Flashlight beam pointing toward the H.
+        ctx.save();
+        ctx.translate(s.x, s.y);
+        ctx.rotate(beamAngle);
+        const grad = ctx.createRadialGradient(0, 0, 2, 0, 0, beamLen);
+        grad.addColorStop(0, 'rgba(250, 240, 200, 0.65)');
+        grad.addColorStop(0.5, 'rgba(250, 240, 200, 0.2)');
+        grad.addColorStop(1, 'rgba(250, 240, 200, 0)');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.arc(0, 0, beamLen, -0.3, 0.3);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+
+        // Survivor body.
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, 7, 0, Math.PI * 2);
+        ctx.fillStyle = '#9f1d22';
+        ctx.fill();
+        ctx.strokeStyle = '#f8fafc';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, 2.5, 0, Math.PI * 2);
+        ctx.fillStyle = '#f8fafc';
+        ctx.fill();
+      }
 
       raf = requestAnimationFrame(draw);
     };
@@ -128,9 +152,9 @@ export function SplashScreen({ onComplete }: SplashScreenProps) {
         {phase === 0 ? (
           <>
             <img
-              src="/helipad-h.svg"
+              src="/icon.svg"
               alt="LAST NIGHT helipad emblem"
-              className="w-32 h-32 sm:w-40 sm:h-40 drop-shadow-[0_0_24px_rgba(245,158,11,0.35)]"
+              className="w-24 h-24 sm:w-32 sm:h-32 drop-shadow-[0_0_24px_rgba(239,68,68,0.45)]"
               draggable={false}
             />
             <div className="font-display text-4xl sm:text-6xl font-bold tracking-[0.18em] text-[#f8fafc]">
