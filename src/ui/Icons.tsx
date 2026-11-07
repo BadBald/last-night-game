@@ -126,7 +126,7 @@ export const LastNightTitleSVG: React.FC = () => (
         cy="115"
         r="39.5"
         fill="none"
-        stroke="url(#lnCampfireGrad)"
+        stroke="#ef4444"
         strokeWidth="6.2"
       />
       {/* Bold Aviation Helipad "H" centered inside the circle */}
