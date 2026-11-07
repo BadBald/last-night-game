@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <circle cx="256" cy="256" r="184" fill="#111722" stroke="#f59e0b" stroke-width="18"/>
+  <circle cx="256" cy="256" r="144" fill="none" stroke="#f59e0b" stroke-width="6" stroke-dasharray="22 16" opacity="0.55"/>
+  <!-- Helipad H Emblem -->
+  <path d="M180 156h38v82h76v-82h38v200h-38v-82h-76v82h-38V156z" fill="#f8fafc"/>
+  <!-- Radio Signal Arcs -->
+  <path d="M206 108a80 80 0 0 1 100 0" fill="none" stroke="#f59e0b" stroke-width="10" stroke-linecap="round"/>
+  <path d="M182 82a116 116 0 0 1 148 0" fill="none" stroke="#ef4444" stroke-width="8" stroke-linecap="round"/>
+</svg>

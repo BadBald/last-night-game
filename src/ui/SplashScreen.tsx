@@ -49,7 +49,7 @@ export function SplashScreen({ onComplete }: SplashScreenProps) {
         {phase === 0 ? (
           <>
             <img
-              src="/icon.svg"
+              src="/helipad-h.svg"
               alt="LAST NIGHT helipad emblem"
               className="w-32 h-32 sm:w-40 sm:h-40 drop-shadow-[0_0_24px_rgba(245,158,11,0.35)]"
               draggable={false}
