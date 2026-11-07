@@ -63,7 +63,7 @@ export const ChatModal: React.FC<{
               <div
                 className={`max-w-[85%] px-3 py-1.5 rounded-xl text-xs leading-relaxed ${
                   m.isSelf
-                    ? 'bg-[#e26d27] text-[#120d0a] rounded-br-sm'
+                    ? 'bg-[#c9363b] text-[#120d0a] rounded-br-sm'
                     : 'bg-[#19130f] border border-[#e4d4c6]/16 text-[#f7f2e7] rounded-bl-sm'
                 }`}
               >
@@ -86,13 +86,13 @@ export const ChatModal: React.FC<{
               }
             }}
             placeholder="Type a message..."
-            className="flex-1 min-h-[40px] px-3 py-2 rounded-xl bg-[#0b0705] border border-[#e4d4c6]/16 text-[#f7f2e7] text-xs placeholder:text-[#9c8b79] focus:outline-none focus:border-[#e26d27]/60"
+            className="flex-1 min-h-[40px] px-3 py-2 rounded-xl bg-[#0b0705] border border-[#e4d4c6]/16 text-[#f7f2e7] text-xs placeholder:text-[#9c8b79] focus:outline-none focus:border-[#c9363b]/60"
             maxLength={200}
           />
           <button
             type="button"
             onClick={handleSend}
-            className="min-w-[40px] min-h-[40px] rounded-xl bg-[#e26d27] hover:bg-[#f07c34] text-[#120d0a] flex items-center justify-center cursor-pointer"
+            className="min-w-[40px] min-h-[40px] rounded-xl bg-[#c9363b] hover:bg-[#d95338] text-[#120d0a] flex items-center justify-center cursor-pointer"
             aria-label="Send"
           >
             <Send className="w-4 h-4" />

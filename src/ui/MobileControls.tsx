@@ -219,7 +219,7 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
               }}
               className={`min-h-[38px] min-w-[52px] px-2.5 rounded-lg border text-[11px] font-semibold active:scale-95 transition-all ${
                 snap.isSprinting
-                  ? 'bg-[#e26d27] text-[#120d0a] border-[#f07c34]'
+                  ? 'bg-[#c9363b] text-[#120d0a] border-[#d95338]'
                   : 'bg-[#110c09]/60 text-[#d8c7b4] border-[#e4d4c6]/18'
               }`}
             >
@@ -249,7 +249,7 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
           {equippedDef?.category === 'weapon_ranged' && (
             <span
               className={`px-1.5 text-[10px] font-mono-num whitespace-nowrap ${
-                snap.isReloading ? 'text-[#e26d27]' : 'text-[#f39c59]'
+                snap.isReloading ? 'text-[#c9363b]' : 'text-[#f39c59]'
               }`}
             >
               {snap.isReloading
@@ -281,7 +281,7 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
                 <span
                   className={`relative w-9 h-8 rounded-lg border flex items-center justify-center ${
                     isEquipped
-                      ? 'bg-[#e26d27]/22 border-[#e26d27]'
+                      ? 'bg-[#c9363b]/22 border-[#c9363b]'
                       : 'bg-[#19130f]/80 border-[#e4d4c6]/14'
                   }`}
                 >
@@ -313,7 +313,7 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
                   }}
                   className={`min-w-[38px] min-h-[38px] rounded-lg border flex items-center justify-center active:scale-95 transition-all ${
                     snap.isReloading
-                      ? 'bg-[#e26d27]/25 border-[#e26d27] text-[#f39c59]'
+                      ? 'bg-[#c9363b]/25 border-[#c9363b] text-[#f39c59]'
                       : 'bg-[#110c09]/60 border-[#e4d4c6]/18 text-[#d8c7b4]'
                   }`}
                   aria-label="Reload Weapon"
@@ -332,7 +332,7 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
                 }}
                 className={`min-w-[52px] min-h-[38px] px-2 rounded-lg border text-[11px] font-semibold flex items-center justify-center gap-1 active:scale-95 transition-all ${
                   hasPrompt
-                    ? 'bg-[#e26d27] text-[#120d0a] border-[#f07c34]'
+                    ? 'bg-[#c9363b] text-[#120d0a] border-[#d95338]'
                     : 'bg-[#110c09]/60 text-[#d8c7b4] border-[#e4d4c6]/18'
                 }`}
                 aria-label="Contextual Interact"
@@ -414,11 +414,11 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
               rightKnob.firing
                 ? 'border-[#e0523c] bg-[#2a120e]/65 opacity-100'
                 : rightKnob.active
-                ? 'border-[#e26d27] bg-[#110c09]/78 opacity-100'
-                : 'border-[#e26d27]/42 bg-[#110c09]/48 opacity-80'
+                ? 'border-[#c9363b] bg-[#110c09]/78 opacity-100'
+                : 'border-[#c9363b]/42 bg-[#110c09]/48 opacity-80'
             }`}
           >
-            <div className="w-14 h-14 rounded-full border border-dashed border-[#e26d27]/30 pointer-events-none flex items-center justify-center">
+            <div className="w-14 h-14 rounded-full border border-dashed border-[#c9363b]/30 pointer-events-none flex items-center justify-center">
               <span className="text-[8px] font-mono-num text-[#f39c59]/80 uppercase pointer-events-none">
                 {rightKnob.firing ? 'FIRE' : 'AIM'}
               </span>
@@ -427,7 +427,7 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
               className={`w-9 h-9 rounded-full border shadow pointer-events-none absolute ${
                 rightKnob.firing
                   ? 'bg-[#c94a38] border-[#f7d6cf]'
-                  : 'bg-[#e26d27]/90 border-[#f7f2e7]'
+                  : 'bg-[#c9363b]/90 border-[#f7f2e7]'
               }`}
               style={{
                 transform: `translate(${rightKnob.x}px, ${rightKnob.y}px)`,
@@ -451,7 +451,7 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
         {equippedDef?.category === 'weapon_ranged' && (
           <>
             <span className="text-[#6e5f51]">·</span>
-            <span className={snap.isReloading ? 'text-[#e26d27]' : 'text-[#f39c59]'}>
+            <span className={snap.isReloading ? 'text-[#c9363b]' : 'text-[#f39c59]'}>
               {snap.isReloading
                 ? `RLD ${Math.round(snap.reloadProgress * 100)}%`
                 : `${equippedInst?.loadedAmmo ?? 0}/${reserveAmmo}`}
@@ -484,7 +484,7 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
               }}
               className={`relative min-w-[44px] min-h-[44px] rounded-lg border flex items-center justify-center active:scale-95 transition-transform ${
                 isEquipped
-                  ? 'bg-[#e26d27]/20 border-[#e26d27]'
+                  ? 'bg-[#c9363b]/20 border-[#c9363b]'
                   : 'bg-[#19130f]/95 border-[#e4d4c6]/14'
               }`}
               aria-label={
@@ -526,7 +526,7 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
               }}
               className={`min-h-[40px] min-w-[50px] px-2 rounded-xl border text-[11px] sm:min-h-[44px] sm:min-w-[60px] sm:px-3 sm:text-xs font-semibold active:scale-95 transition-transform ${
                 snap.isSprinting
-                  ? 'bg-[#e26d27] text-[#120d0a] border-[#f07c34]'
+                  ? 'bg-[#c9363b] text-[#120d0a] border-[#d95338]'
                   : 'bg-[#110c09]/92 text-[#d8c7b4] border-[#e4d4c6]/18'
               }`}
             >
@@ -620,7 +620,7 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
                 snap.flashlightBattery <= 18
                   ? 'bg-[#2a120e]/85 text-[#f3a093] border-[#c94a38]/70'
                   : snap.flashlightOn
-                  ? 'bg-[#110c09]/92 text-[#f39c59] border-[#e26d27]/70'
+                  ? 'bg-[#110c09]/92 text-[#f39c59] border-[#c9363b]/70'
                   : 'bg-[#110c09]/92 text-[#d8c7b4] border-[#e4d4c6]/18'
               }`}
               aria-label="Open Phone"
@@ -628,7 +628,7 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
               <Smartphone className="w-4 h-4 shrink-0" />
               <span className="hidden xs:inline">Phone</span>
               {snap.unreadRadioCount > 0 && (
-                <span className="font-mono-num text-[#e26d27]">
+                <span className="font-mono-num text-[#c9363b]">
                   ({snap.unreadRadioCount})
                 </span>
               )}
@@ -643,7 +643,7 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
               }}
               className={`min-w-[40px] min-h-[40px] px-2 sm:min-w-[44px] sm:min-h-[44px] sm:px-2.5 rounded-xl border flex items-center justify-center active:scale-95 transition-transform ${
                 snap.isReloading
-                  ? 'bg-[#e26d27]/20 border-[#e26d27] text-[#f39c59]'
+                  ? 'bg-[#c9363b]/20 border-[#c9363b] text-[#f39c59]'
                   : 'bg-[#110c09]/92 border-[#e4d4c6]/18 text-[#d8c7b4]'
               }`}
               aria-label="Reload Weapon"
@@ -662,7 +662,7 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
               className="min-w-[42px] min-h-[40px] px-2 sm:min-w-[48px] sm:min-h-[44px] sm:px-2.5 rounded-xl bg-[#110c09]/92 border border-[#e4d4c6]/18 text-[#d8c7b4] flex items-center justify-center gap-1 text-xs font-semibold active:scale-95 transition-transform"
               aria-label="Open Backpack"
             >
-              <Backpack className="w-4 h-4 shrink-0 text-[#e26d27]" />
+              <Backpack className="w-4 h-4 shrink-0 text-[#c9363b]" />
               <span className="hidden xs:inline">Pack</span>
             </button>
           </div>
@@ -677,7 +677,7 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
                 }}
                 className={`min-w-[50px] min-h-[42px] px-2 sm:min-w-[58px] sm:min-h-[46px] sm:px-2.5 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1 active:scale-95 transition-all ${
                   hasPrompt
-                    ? 'bg-[#e26d27] text-[#120d0a] border-[#f07c34] shadow-lg'
+                    ? 'bg-[#c9363b] text-[#120d0a] border-[#d95338] shadow-lg'
                     : 'bg-[#110c09]/92 text-[#d8c7b4] border-[#e4d4c6]/18'
                 }`}
                 aria-label="Contextual Interact"
@@ -758,13 +758,13 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
                 rightKnob.firing
                   ? 'border-[#e0523c] bg-[#2a120e]/45'
                   : rightKnob.active
-                  ? 'border-[#e26d27]'
-                  : 'border-[#e26d27]/45'
+                  ? 'border-[#c9363b]'
+                  : 'border-[#c9363b]/45'
               }`}
               style={{ width: joySize, height: joySize }}
             >
               <div
-                className="rounded-full border border-dashed border-[#e26d27]/28 pointer-events-none flex items-center justify-center"
+                className="rounded-full border border-dashed border-[#c9363b]/28 pointer-events-none flex items-center justify-center"
                 style={{ width: aimInnerSize, height: aimInnerSize }}
               >
                 <span className="text-[9px] font-mono-num text-[#f39c59]/80 uppercase pointer-events-none text-center leading-tight">
@@ -775,7 +775,7 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
                 className={`rounded-full border shadow-md pointer-events-none absolute ${
                   rightKnob.firing
                     ? 'bg-[#c94a38] border-[#f7d6cf]'
-                    : 'bg-[#e26d27]/90 border-[#f7f2e7]'
+                    : 'bg-[#c9363b]/90 border-[#f7f2e7]'
                 }`}
                 style={{
                   width: joyKnobSize,

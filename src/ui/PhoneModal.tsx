@@ -202,7 +202,7 @@ export const PhoneModal: React.FC<PhoneModalProps> = ({
             activeRadio
               ? 'text-[#e0484d]'
               : obj.radioDiscovered
-              ? 'text-[#e26d27]'
+              ? 'text-[#c9363b]'
               : 'text-[#c9363b]'
           }`}
         />
@@ -227,7 +227,7 @@ export const PhoneModal: React.FC<PhoneModalProps> = ({
 
       <div className="flex items-center gap-2 shrink-0">
         {snap.flashlightOn && snap.flashlightBattery > 0 && (
-          <Flashlight className="w-3.5 h-3.5 text-[#e26d27] shrink-0" />
+          <Flashlight className="w-3.5 h-3.5 text-[#c9363b] shrink-0" />
         )}
         <div className="flex items-center gap-1">
           <span
@@ -275,7 +275,7 @@ export const PhoneModal: React.FC<PhoneModalProps> = ({
         <div className="text-right shrink-0 font-mono-num">
           <div className="inline-flex items-center gap-1 text-xs text-[#f39c59]">
             <Compass
-              className="w-3.5 h-3.5 shrink-0 text-[#e26d27]"
+              className="w-3.5 h-3.5 shrink-0 text-[#c9363b]"
               style={{
                 transform: `rotate(${(obj.directionAngle * 180) / Math.PI + 90}deg)`,
               }}
@@ -299,7 +299,7 @@ export const PhoneModal: React.FC<PhoneModalProps> = ({
           onClick={onToggleFlashlight}
           className={`min-h-[48px] px-3 py-2 rounded-xl border text-left flex items-center gap-2.5 transition-colors cursor-pointer ${
             snap.flashlightOn && snap.flashlightBattery > 0
-              ? 'bg-[#e26d27] text-[#120d0a] border-[#f07c34]'
+              ? 'bg-[#c9363b] text-[#120d0a] border-[#d95338]'
               : snap.flashlightBattery <= 0
               ? 'bg-[#19130f]/55 text-[#6e5f51] border-[#e4d4c6]/10'
               : 'bg-[#19130f] hover:bg-[#231a14] text-[#f7f2e7] border-[#e4d4c6]/16'
@@ -309,7 +309,7 @@ export const PhoneModal: React.FC<PhoneModalProps> = ({
             className={`w-4 h-4 shrink-0 ${
               snap.flashlightOn && snap.flashlightBattery > 0
                 ? 'text-[#120d0a]'
-                : 'text-[#e26d27]'
+                : 'text-[#c9363b]'
             }`}
           />
           <div className="min-w-0">
@@ -340,7 +340,7 @@ export const PhoneModal: React.FC<PhoneModalProps> = ({
           disabled={!canCharge}
           className={`min-h-[48px] px-3 py-2 rounded-xl border text-left flex items-center gap-2.5 transition-colors ${
             canCharge
-              ? 'bg-[#19130f] hover:bg-[#231a14] text-[#f7f2e7] border-[#e26d27]/45 cursor-pointer'
+              ? 'bg-[#19130f] hover:bg-[#231a14] text-[#f7f2e7] border-[#c9363b]/45 cursor-pointer'
               : 'bg-[#16100d]/60 text-[#6e5f51] border-[#e4d4c6]/10 cursor-not-allowed'
           }`}
         >
@@ -367,11 +367,11 @@ export const PhoneModal: React.FC<PhoneModalProps> = ({
           onClick={() => setActiveTab('maps')}
           className={`min-h-[40px] px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors whitespace-nowrap cursor-pointer ${
             activeTab === 'maps'
-              ? 'bg-[#281e17] text-[#f7f2e7] border border-[#e26d27]/35'
+              ? 'bg-[#281e17] text-[#f7f2e7] border border-[#c9363b]/35'
               : 'text-[#9c8b79] hover:text-[#d8c7b4]'
           }`}
         >
-          <MapPin className="w-3.5 h-3.5 text-[#e26d27] shrink-0" />
+          <MapPin className="w-3.5 h-3.5 text-[#c9363b] shrink-0" />
           <span>Maps{padActive ? ` [${gp.lb}]` : ''}</span>
         </button>
 
@@ -390,7 +390,7 @@ export const PhoneModal: React.FC<PhoneModalProps> = ({
           <Radio className="w-3.5 h-3.5 shrink-0 text-[#e0484d]" />
           <span>Radio{padActive ? ` [${gp.rb}]` : ''}</span>
           {snap.unreadRadioCount > 0 && (
-            <span className="font-mono-num text-[#e26d27]">
+            <span className="font-mono-num text-[#c9363b]">
               ({snap.unreadRadioCount})
             </span>
           )}
@@ -405,14 +405,14 @@ export const PhoneModal: React.FC<PhoneModalProps> = ({
             }}
             className={`min-h-[40px] px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors whitespace-nowrap cursor-pointer ${
               activeTab === 'chat'
-                ? 'bg-[#281e17] text-[#f7f2e7] border border-[#e26d27]/35'
+                ? 'bg-[#281e17] text-[#f7f2e7] border border-[#c9363b]/35'
                 : 'text-[#9c8b79] hover:text-[#d8c7b4]'
             }`}
           >
             <MessageCircle className="w-3.5 h-3.5 shrink-0 text-[#f39c59]" />
             <span>Chat</span>
             {snap.online.unreadChatCount > 0 && (
-              <span className="font-mono-num text-[#e26d27]">
+              <span className="font-mono-num text-[#c9363b]">
                 ({snap.online.unreadChatCount})
               </span>
             )}
@@ -481,7 +481,7 @@ export const PhoneModal: React.FC<PhoneModalProps> = ({
             y1={f45Y}
             x2={f45EndX}
             y2={f45Y}
-            stroke="#e26d27"
+            stroke="#c9363b"
             strokeOpacity="0.45"
             strokeWidth="1"
             strokeDasharray="4 4"
@@ -516,7 +516,7 @@ export const PhoneModal: React.FC<PhoneModalProps> = ({
             y1={py}
             x2={tx}
             y2={ty}
-            stroke={obj.stage === 'HOSPITAL_INJECTION' ? '#c7a955' : '#e26d27'}
+            stroke={obj.stage === 'HOSPITAL_INJECTION' ? '#c7a955' : '#c9363b'}
             strokeOpacity="0.82"
             strokeWidth="1.5"
             strokeDasharray="5 4"
@@ -532,7 +532,7 @@ export const PhoneModal: React.FC<PhoneModalProps> = ({
                   <circle
                     r="11"
                     fill="rgba(226, 109, 39, 0.22)"
-                    stroke="#e26d27"
+                    stroke="#c9363b"
                     strokeWidth="1.5"
                   />
                   <text
@@ -563,7 +563,7 @@ export const PhoneModal: React.FC<PhoneModalProps> = ({
               m.id === 'hospital' &&
               (obj.stage === 'HOSPITAL_INJECTION' || obj.stage === 'HOSPITAL_RADIO')
             ) {
-              const col = obj.stage === 'HOSPITAL_INJECTION' ? '#c7a955' : '#e26d27';
+              const col = obj.stage === 'HOSPITAL_INJECTION' ? '#c7a955' : '#c9363b';
               return (
                 <g key={m.id} transform={`translate(${mx}, ${my})`}>
                   <circle
@@ -626,7 +626,7 @@ export const PhoneModal: React.FC<PhoneModalProps> = ({
               <circle
                 r="6"
                 fill="none"
-                stroke={obj.stage === 'HOSPITAL_INJECTION' ? '#c7a955' : '#e26d27'}
+                stroke={obj.stage === 'HOSPITAL_INJECTION' ? '#c7a955' : '#c9363b'}
                 strokeWidth="1.5"
               />
             </g>
@@ -653,7 +653,7 @@ export const PhoneModal: React.FC<PhoneModalProps> = ({
         <div className="flex items-center justify-between gap-2 font-mono-num">
           <span
             className={`font-semibold truncate ${
-              obj.stage === 'HOSPITAL_INJECTION' ? 'text-[#e3c674]' : 'text-[#e26d27]'
+              obj.stage === 'HOSPITAL_INJECTION' ? 'text-[#e3c674]' : 'text-[#c9363b]'
             }`}
           >
             {obj.title}
@@ -866,7 +866,7 @@ export const PhoneModal: React.FC<PhoneModalProps> = ({
                           isPlayingThis
                             ? 'bg-[#2a1114] hover:bg-[#38161a] text-[#f7f2e7] border-[#c9363b]/65'
                             : isFocused
-                            ? 'bg-[#281b15] text-[#f7f2e7] border-[#e26d27]/75'
+                            ? 'bg-[#281b15] text-[#f7f2e7] border-[#c9363b]/75'
                             : 'bg-[#19130f] hover:bg-[#241b15] text-[#f39c59] hover:text-[#f7f2e7] border-[#e4d4c6]/18'
                         }`}
                       >
@@ -956,7 +956,7 @@ export const PhoneModal: React.FC<PhoneModalProps> = ({
           {snap.online.chatMessages.map((m) => (
             <div key={m.id} className={`flex flex-col ${m.fromId === snap.online.selfId ? 'items-end' : 'items-start'}`}>
               <span className="text-[10px] font-mono-num text-[#9c8b79] mb-0.5">{m.fromCallsign}</span>
-              <div className={`max-w-[85%] px-2.5 py-1 rounded-lg text-xs leading-relaxed break-words ${m.fromId === snap.online.selfId ? 'bg-[#e26d27] text-[#120d0a] rounded-br-sm' : 'bg-[#19130f] border border-[#e4d4c6]/16 text-[#f7f2e7] rounded-bl-sm'}`}>
+              <div className={`max-w-[85%] px-2.5 py-1 rounded-lg text-xs leading-relaxed break-words ${m.fromId === snap.online.selfId ? 'bg-[#c9363b] text-[#120d0a] rounded-br-sm' : 'bg-[#19130f] border border-[#e4d4c6]/16 text-[#f7f2e7] rounded-bl-sm'}`}>
                 {m.text}
               </div>
             </div>
@@ -970,7 +970,7 @@ export const PhoneModal: React.FC<PhoneModalProps> = ({
             autoComplete="off"
             enterKeyHint="send"
             placeholder="Type a message..."
-            className="flex-1 min-h-[36px] px-2.5 py-1.5 rounded-lg bg-[#0b0806] border border-[#e4d4c6]/16 text-[#f7f2e7] text-xs placeholder:text-[#9c8b79] focus:outline-none focus:border-[#e26d27]/60"
+            className="flex-1 min-h-[36px] px-2.5 py-1.5 rounded-lg bg-[#0b0806] border border-[#e4d4c6]/16 text-[#f7f2e7] text-xs placeholder:text-[#9c8b79] focus:outline-none focus:border-[#c9363b]/60"
             maxLength={200}
             onKeyDown={handleSendKey}
             onFocus={() => {
@@ -983,7 +983,7 @@ export const PhoneModal: React.FC<PhoneModalProps> = ({
           <button
             type="button"
             onClick={sendDraft}
-            className="min-w-[38px] min-h-[36px] rounded-lg bg-[#e26d27] hover:bg-[#f07c34] text-[#120d0a] flex items-center justify-center cursor-pointer active:scale-95 transition-transform"
+            className="min-w-[38px] min-h-[36px] rounded-lg bg-[#c9363b] hover:bg-[#d95338] text-[#120d0a] flex items-center justify-center cursor-pointer active:scale-95 transition-transform"
             aria-label="Send message"
           >
             <Send className="w-3.5 h-3.5" />
@@ -1007,7 +1007,7 @@ export const PhoneModal: React.FC<PhoneModalProps> = ({
           activeRadio
             ? 'border-[#c9363b]/65'
             : snap.flashlightOn && snap.flashlightBattery > 0
-            ? 'border-[#e26d27]/55'
+            ? 'border-[#c9363b]/55'
             : 'border-[#e4d4c6]/20'
         } ${isCompactLandscape ? 'max-w-3xl' : 'max-w-[420px]'}`}
       >
@@ -1054,7 +1054,7 @@ export const PhoneModal: React.FC<PhoneModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="w-24 h-1.5 rounded-full bg-[#382b22] hover:bg-[#e26d27] transition-colors cursor-pointer"
+            className="w-24 h-1.5 rounded-full bg-[#382b22] hover:bg-[#c9363b] transition-colors cursor-pointer"
             aria-label="Close Phone"
           />
         </div>

@@ -102,7 +102,7 @@ export const HUD: React.FC<HUDProps> = ({
     : undefined;
 
   const healthBarCls = snap.health <= 30 ? 'bg-[#e03c28]' : 'bg-[#c94a38]';
-  const hungerBarCls = snap.hunger <= 20 ? 'bg-[#b85318]' : 'bg-[#e26d27]';
+  const hungerBarCls = snap.hunger <= 20 ? 'bg-[#b85318]' : 'bg-[#c9363b]';
   const staminaBarCls = 'bg-[#e6d6c3]';
   const contamBarCls =
     snap.contamination >= 90
@@ -358,7 +358,7 @@ export const HUD: React.FC<HUDProps> = ({
               >
                 <MessageCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 {snap.online.unreadChatCount > 0 && (
-                  <span className="absolute -top-1 -right-1 px-1 rounded bg-[#e26d27] text-[#120d0a] text-[9px] font-mono-num font-bold leading-tight">
+                  <span className="absolute -top-1 -right-1 px-1 rounded bg-[#c9363b] text-[#120d0a] text-[9px] font-mono-num font-bold leading-tight">
                     {snap.online.unreadChatCount}
                   </span>
                 )}
@@ -372,14 +372,14 @@ export const HUD: React.FC<HUDProps> = ({
                   isPhoneBatteryLow
                     ? 'bg-[#2a120e]/85 border-[#c94a38]/70 text-[#f3a093]'
                     : snap.flashlightOn
-                    ? 'bg-[#110c09]/92 border-[#e26d27]/65 text-[#f39c59]'
+                    ? 'bg-[#110c09]/92 border-[#c9363b]/65 text-[#f39c59]'
                     : 'bg-[#110c09]/92 active:bg-[#1f1712] border-[#e4d4c6]/16 text-[#d8c7b4]'
                 }`}
                 aria-label="Open Phone"
               >
                 <Smartphone className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 {snap.unreadRadioCount > 0 && (
-                  <span className="absolute -top-1 -right-1 px-1 rounded bg-[#e26d27] text-[#120d0a] text-[9px] font-mono-num font-bold leading-tight">
+                  <span className="absolute -top-1 -right-1 px-1 rounded bg-[#c9363b] text-[#120d0a] text-[9px] font-mono-num font-bold leading-tight">
                     {snap.unreadRadioCount}
                   </span>
                 )}
@@ -391,7 +391,7 @@ export const HUD: React.FC<HUDProps> = ({
               onClick={onToggleFullscreen}
               className={`min-w-[36px] min-h-[36px] sm:min-w-[44px] sm:min-h-[44px] rounded-xl border flex items-center justify-center cursor-pointer transition-colors ${
                 isFullscreen
-                  ? 'bg-[#e26d27]/20 border-[#e26d27]/70 text-[#f39c59]'
+                  ? 'bg-[#c9363b]/20 border-[#c9363b]/70 text-[#f39c59]'
                   : 'bg-[#110c09]/92 active:bg-[#1f1712] border-[#e4d4c6]/16 text-[#d8c7b4]'
               }`}
               aria-label={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
@@ -527,7 +527,7 @@ export const HUD: React.FC<HUDProps> = ({
               <div
                 className={`min-h-[44px] px-3 rounded-xl border flex items-center gap-1.5 text-[11px] font-mono-num ${
                   padActive
-                    ? 'bg-[#110c09]/90 border-[#e26d27]/45 text-[#f39c59]'
+                    ? 'bg-[#110c09]/90 border-[#c9363b]/45 text-[#f39c59]'
                     : 'bg-[#110c09]/76 border-[#e4d4c6]/14 text-[#9c8b79]'
                 }`}
                 title={snap.gamepadName || 'Controller Connected'}
@@ -544,7 +544,7 @@ export const HUD: React.FC<HUDProps> = ({
               onClick={onToggleFullscreen}
               className={`min-w-[44px] min-h-[44px] flex items-center justify-center border rounded-xl transition-colors cursor-pointer ${
                 isFullscreen
-                  ? 'bg-[#e26d27]/20 border-[#e26d27]/70 text-[#f39c59]'
+                  ? 'bg-[#c9363b]/20 border-[#c9363b]/70 text-[#f39c59]'
                   : 'bg-[#110c09]/90 hover:bg-[#1c1510] border-[#e4d4c6]/16 text-[#d8c7b4] hover:text-[#f7f2e7]'
               }`}
               title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
@@ -577,7 +577,7 @@ export const HUD: React.FC<HUDProps> = ({
               className="min-h-[44px] flex items-center gap-1.5 px-3.5 py-2 bg-[#110c09]/90 hover:bg-[#1c1510] border border-[#e4d4c6]/16 rounded-xl text-xs font-medium text-[#d8c7b4] hover:text-[#f7f2e7] transition-colors whitespace-nowrap shrink-0 cursor-pointer"
               title={padActive ? `Pause Game (${gp.start})` : 'Pause Game (Esc)'}
             >
-              <Pause className="w-4 h-4 text-[#e26d27]" />
+              <Pause className="w-4 h-4 text-[#c9363b]" />
               <span>{padActive ? `Pause [${gp.start}]` : 'Pause'}</span>
             </button>
           </div>
@@ -597,7 +597,7 @@ export const HUD: React.FC<HUDProps> = ({
         }`}
       >
         {fullscreenHint && (
-          <div className="max-w-sm px-3 py-1.5 rounded-xl bg-[#1a110c]/92 border border-[#e26d27]/55 text-[11px] text-[#f7f2e7] text-center">
+          <div className="max-w-sm px-3 py-1.5 rounded-xl bg-[#1a110c]/92 border border-[#c9363b]/55 text-[11px] text-[#f7f2e7] text-center">
             {fullscreenHint}
           </div>
         )}
@@ -610,11 +610,11 @@ export const HUD: React.FC<HUDProps> = ({
                 : 'max-w-sm sm:max-w-md px-3.5 py-2 rounded-xl'
             } ${
               snap.latestToast.urgent
-                ? 'bg-[#1c100b]/90 border-[#e26d27]/60 text-[#f7f2e7]'
+                ? 'bg-[#1c100b]/90 border-[#c9363b]/60 text-[#f7f2e7]'
                 : 'bg-[#110c09]/86 border-[#e4d4c6]/18 text-[#d8c7b4]'
             }`}
           >
-            <div className="text-[11px] font-semibold tracking-wide text-[#e26d27] leading-tight">
+            <div className="text-[11px] font-semibold tracking-wide text-[#c9363b] leading-tight">
               {snap.latestToast.title}
             </div>
             <div
@@ -635,7 +635,7 @@ export const HUD: React.FC<HUDProps> = ({
               e.stopPropagation();
               onInteract();
             }}
-            className={`pointer-events-auto cursor-pointer hover:bg-[#1c1510] active:scale-95 border border-[#e26d27]/70 text-center transition-all shadow-lg ${
+            className={`pointer-events-auto cursor-pointer hover:bg-[#1c1510] active:scale-95 border border-[#c9363b]/70 text-center transition-all shadow-lg ${
               isCompactLandscape
                 ? 'min-h-[38px] px-3 py-1 rounded-lg bg-[#110c09]/86 backdrop-blur-sm'
                 : `min-h-[44px] px-4 py-2 rounded-xl bg-[#110c09]/94 ${
@@ -657,7 +657,7 @@ export const HUD: React.FC<HUDProps> = ({
             {snap.interactionPrompt.progress !== undefined && (
               <div className="mt-1 w-36 h-1 bg-[#221914] rounded overflow-hidden mx-auto">
                 <div
-                  className="h-full bg-[#e26d27] transition-none"
+                  className="h-full bg-[#c9363b] transition-none"
                   style={{
                     width: `${Math.round(snap.interactionPrompt.progress * 100)}%`,
                   }}
@@ -697,7 +697,7 @@ export const HUD: React.FC<HUDProps> = ({
               <div className="text-xs font-mono-num text-[#9c8b79] mt-0.5">
                 {equippedDef?.category === 'weapon_ranged' ? (
                   snap.isReloading ? (
-                    <span className="text-[#e26d27]">
+                    <span className="text-[#c9363b]">
                       RELOADING {Math.round(snap.reloadProgress * 100)}%
                     </span>
                   ) : (
@@ -741,7 +741,7 @@ export const HUD: React.FC<HUDProps> = ({
                     onClick={() => onQuickSlotClick(slotIdx)}
                     className={`relative w-11 h-11 rounded-lg border flex items-center justify-center transition-colors cursor-pointer ${
                       isEquipped
-                        ? 'bg-[#e26d27]/20 border-[#e26d27]'
+                        ? 'bg-[#c9363b]/20 border-[#c9363b]'
                         : 'bg-[#19130f]/95 border-[#e4d4c6]/14 hover:border-[#e4d4c6]/32'
                     }`}
                     title={
@@ -790,7 +790,7 @@ export const HUD: React.FC<HUDProps> = ({
               onClick={onTogglePhone}
               className={`min-h-[44px] flex items-center gap-2 px-3.5 py-3 rounded-xl border text-xs font-semibold transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
                 snap.panel === 'PHONE'
-                  ? 'bg-[#e26d27] text-[#120d0a] border-[#f07c34]'
+                  ? 'bg-[#c9363b] text-[#120d0a] border-[#d95338]'
                   : isPhoneBatteryLow
                   ? 'bg-[#2a120e]/92 hover:bg-[#361712] text-[#f3a093] border-[#c94a38]/65'
                   : 'bg-[#110c09]/90 hover:bg-[#1c1510] text-[#f7f2e7] border-[#e4d4c6]/16'
@@ -802,7 +802,7 @@ export const HUD: React.FC<HUDProps> = ({
                   snap.panel === 'PHONE'
                     ? 'text-[#120d0a]'
                     : snap.flashlightOn
-                    ? 'text-[#e26d27]'
+                    ? 'text-[#c9363b]'
                     : 'text-[#d8c7b4]'
                 }`}
               />
@@ -810,7 +810,7 @@ export const HUD: React.FC<HUDProps> = ({
               {snap.unreadRadioCount > 0 && (
                 <span
                   className={`font-mono-num ${
-                    snap.panel === 'PHONE' ? 'text-[#120d0a]' : 'text-[#e26d27]'
+                    snap.panel === 'PHONE' ? 'text-[#120d0a]' : 'text-[#c9363b]'
                   }`}
                 >
                   ({snap.unreadRadioCount})
@@ -823,7 +823,7 @@ export const HUD: React.FC<HUDProps> = ({
               onClick={onToggleInventory}
               className={`min-h-[44px] flex items-center gap-2 px-4 py-3 rounded-xl border text-xs font-semibold transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
                 snap.panel === 'INVENTORY' || snap.panel === 'LOOT'
-                  ? 'bg-[#e26d27] text-[#120d0a] border-[#f07c34]'
+                  ? 'bg-[#c9363b] text-[#120d0a] border-[#d95338]'
                   : 'bg-[#110c09]/90 hover:bg-[#1c1510] text-[#f7f2e7] border-[#e4d4c6]/16'
               }`}
             >
@@ -831,7 +831,7 @@ export const HUD: React.FC<HUDProps> = ({
                 className={`w-4 h-4 ${
                   snap.panel === 'INVENTORY' || snap.panel === 'LOOT'
                     ? 'text-[#120d0a]'
-                    : 'text-[#e26d27]'
+                    : 'text-[#c9363b]'
                 }`}
               />
               <span>{padActive ? `Pack [${gp.north}]` : 'Pack [Tab]'}</span>
@@ -975,13 +975,13 @@ const LandscapeIconBtn: React.FC<{
         danger
           ? 'bg-[#2a120e]/80 border-[#c94a38]/70 text-[#f3a093]'
           : active
-          ? 'bg-[#e26d27]/22 border-[#e26d27]/70 text-[#f39c59]'
+          ? 'bg-[#c9363b]/22 border-[#c9363b]/70 text-[#f39c59]'
           : 'bg-[#110c09]/76 border-[#e4d4c6]/16 text-[#d8c7b4]'
       }`}
     >
       {children}
       {badgeCount > 0 && (
-        <span className="absolute -top-1 -right-1 px-1 rounded bg-[#e26d27] text-[#120d0a] text-[8px] font-mono-num font-bold leading-tight">
+        <span className="absolute -top-1 -right-1 px-1 rounded bg-[#c9363b] text-[#120d0a] text-[8px] font-mono-num font-bold leading-tight">
           {badgeCount}
         </span>
       )}

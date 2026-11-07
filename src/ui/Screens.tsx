@@ -454,7 +454,7 @@ const PauseModal: React.FC<{
           {snap.clockFormatted} · {snap.districtName} · Dawn in {snap.countdownFormatted}
         </p>
         {snap.online.isOnlineMode && (
-          <p className="mt-1 text-[11px] text-[#e26d27] font-mono-num">
+          <p className="mt-1 text-[11px] text-[#c9363b] font-mono-num">
             LIVE PvPvE ({snap.online.aliveCount}/{snap.online.totalParticipants} Alive) — Night continues in real time
           </p>
         )}
@@ -475,12 +475,12 @@ const PauseModal: React.FC<{
                 onClick={act.run}
                 className={
                   isPrimary
-                    ? `group w-full min-h-[46px] py-2.5 px-4 rounded-xl bg-[#e26d27] hover:bg-[#f07c34] text-[#120d0a] text-sm font-semibold flex items-center justify-center gap-2.5 transition-colors whitespace-nowrap cursor-pointer ${
+                    ? `group w-full min-h-[46px] py-2.5 px-4 rounded-xl bg-[#c9363b] hover:bg-[#d95338] text-[#120d0a] text-sm font-semibold flex items-center justify-center gap-2.5 transition-colors whitespace-nowrap cursor-pointer ${
                         isFocused ? 'ring-2 ring-[#f7f2e7]' : ''
                       }`
                     : `min-h-[44px] py-2 px-3 rounded-xl border text-xs sm:text-sm font-medium flex items-center justify-center gap-1.5 transition-colors whitespace-nowrap cursor-pointer ${
                         isFocused
-                          ? 'bg-[#281e17] border-[#e26d27] text-[#f7f2e7]'
+                          ? 'bg-[#281e17] border-[#c9363b] text-[#f7f2e7]'
                           : 'bg-[#19130f] hover:bg-[#231a14] border-[#e4d4c6]/15 text-[#d8c7b4] hover:text-[#f7f2e7]'
                       }`
                 }
@@ -490,9 +490,9 @@ const PauseModal: React.FC<{
                 )}
                 {act.id === 'fullscreen' &&
                   (isFullscreen ? (
-                    <Minimize2 className="w-4 h-4 text-[#e26d27] shrink-0" />
+                    <Minimize2 className="w-4 h-4 text-[#c9363b] shrink-0" />
                   ) : (
-                    <Maximize2 className="w-4 h-4 text-[#e26d27] shrink-0" />
+                    <Maximize2 className="w-4 h-4 text-[#c9363b] shrink-0" />
                   ))}
                 <span>
                   {act.label}
@@ -646,7 +646,7 @@ const EndScreenModal: React.FC<{
                 onReturnToTitle();
                 onOpenOnlineMatchmaking();
               }}
-              className={`flex-1 min-h-[48px] py-3 px-4 rounded-xl bg-[#e26d27] hover:bg-[#f07c34] text-[#120d0a] text-sm font-semibold transition-colors whitespace-nowrap cursor-pointer ${
+              className={`flex-1 min-h-[48px] py-3 px-4 rounded-xl bg-[#c9363b] hover:bg-[#d95338] text-[#120d0a] text-sm font-semibold transition-colors whitespace-nowrap cursor-pointer ${
                 padActive && focusedBtn === 0 ? 'ring-2 ring-[#f7f2e7]' : ''
               }`}
             >
@@ -657,7 +657,7 @@ const EndScreenModal: React.FC<{
             <button
               type="button"
               onClick={onStartNewGame}
-              className={`flex-1 min-h-[48px] py-3 px-4 rounded-xl bg-[#e26d27] hover:bg-[#f07c34] text-[#120d0a] text-sm font-semibold transition-colors whitespace-nowrap cursor-pointer ${
+              className={`flex-1 min-h-[48px] py-3 px-4 rounded-xl bg-[#c9363b] hover:bg-[#d95338] text-[#120d0a] text-sm font-semibold transition-colors whitespace-nowrap cursor-pointer ${
                 padActive && focusedBtn === 0 ? 'ring-2 ring-[#f7f2e7]' : ''
               }`}
             >
@@ -669,7 +669,7 @@ const EndScreenModal: React.FC<{
             onClick={onReturnToTitle}
             className={`min-h-[48px] py-3 px-4 rounded-xl border text-sm font-medium transition-colors whitespace-nowrap cursor-pointer ${
               padActive && focusedBtn === 1
-                ? 'bg-[#281e17] border-[#e26d27] text-[#f7f2e7]'
+                ? 'bg-[#281e17] border-[#c9363b] text-[#f7f2e7]'
                 : 'bg-[#19130f] hover:bg-[#231a14] border-[#e4d4c6]/16 text-[#d8c7b4] hover:text-[#f7f2e7]'
             }`}
           >
@@ -1056,7 +1056,7 @@ const SettingsModal: React.FC<{
               }
               className={`min-h-[40px] px-3.5 py-1.5 rounded-xl font-semibold cursor-pointer transition-colors ${
                 settings.controllerVibration ?? true
-                  ? 'bg-[#e26d27] text-[#120d0a]'
+                  ? 'bg-[#c9363b] text-[#120d0a]'
                   : 'bg-[#19130f] border border-[#e4d4c6]/16 text-[#9c8b79]'
               }`}
             >
@@ -1071,7 +1071,7 @@ const SettingsModal: React.FC<{
               onClick={onToggleFullscreen}
               className={`min-h-[40px] px-3.5 py-1.5 rounded-xl font-semibold flex items-center gap-1.5 cursor-pointer transition-colors ${
                 isFullscreen
-                  ? 'bg-[#e26d27] text-[#120d0a]'
+                  ? 'bg-[#c9363b] text-[#120d0a]'
                   : 'bg-[#19130f] border border-[#e4d4c6]/16 text-[#d8c7b4]'
               }`}
             >
@@ -1096,7 +1096,7 @@ const SettingsModal: React.FC<{
               onClick={() => onUpdate({ screenShake: !settings.screenShake })}
               className={`min-h-[40px] px-3.5 py-1.5 rounded-xl font-semibold cursor-pointer transition-colors ${
                 settings.screenShake
-                  ? 'bg-[#e26d27] text-[#120d0a]'
+                  ? 'bg-[#c9363b] text-[#120d0a]'
                   : 'bg-[#19130f] border border-[#e4d4c6]/16 text-[#9c8b79]'
               }`}
             >
@@ -1113,7 +1113,7 @@ const SettingsModal: React.FC<{
               }
               className={`min-h-[40px] px-3.5 py-1.5 rounded-xl font-semibold cursor-pointer transition-colors ${
                 settings.showAcousticRings
-                  ? 'bg-[#e26d27] text-[#120d0a]'
+                  ? 'bg-[#c9363b] text-[#120d0a]'
                   : 'bg-[#19130f] border border-[#e4d4c6]/16 text-[#9c8b79]'
               }`}
             >
@@ -1131,7 +1131,7 @@ const SettingsModal: React.FC<{
                   onClick={() => onUpdate({ mobileControlsMode: m })}
                   className={`min-h-[36px] px-3 py-1 rounded-lg text-xs font-medium capitalize cursor-pointer transition-colors ${
                     settings.mobileControlsMode === m
-                      ? 'bg-[#e26d27] text-[#120d0a] font-semibold'
+                      ? 'bg-[#c9363b] text-[#120d0a] font-semibold'
                       : 'text-[#9c8b79] hover:text-[#f7f2e7]'
                   }`}
                 >
@@ -1240,7 +1240,7 @@ const CreditsModal: React.FC<{
 
           <div className="pt-3 border-t border-[#e4d4c6]/14 space-y-2 text-[11px] font-mono-num text-[#9c8b79] leading-relaxed">
             <div>
-              <div className="text-[#e26d27] font-sans font-semibold mb-0.5">
+              <div className="text-[#c9363b] font-sans font-semibold mb-0.5">
                 Controller ({isGamepadConnected ? 'Connected' : 'Xbox / PlayStation / Switch'})
               </div>
               <div>
@@ -1249,7 +1249,7 @@ const CreditsModal: React.FC<{
             </div>
 
             <div>
-              <div className="text-[#e26d27] font-sans font-semibold mb-0.5">
+              <div className="text-[#c9363b] font-sans font-semibold mb-0.5">
                 {isTouchDevice ? 'Touch Controls' : 'Keyboard & Mouse'}
               </div>
               <div>

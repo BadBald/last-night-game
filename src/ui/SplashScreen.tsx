@@ -5,14 +5,15 @@ interface SplashScreenProps {
 }
 
 // A minimal two-beat splash shown once on first load, before the title menu.
-// Beat 1 (~5.5s): "LAST NIGHT" with the red-circled H emblem, survivors
-// walking toward the H in the dark with their flashlights.
+// Beat 1 (~5.5s): the "LAST NIGHT" logo (lastnightlogo splash.png) with
+// survivors walking toward the red-circled H, flashlights pointing at it.
 // Beat 2 (~1.5s): the Clatter Games studio logo.
 // Total ~7s. No game logic is touched; this is a pure overlay.
 export function SplashScreen({ onComplete }: SplashScreenProps) {
   const [phase, setPhase] = useState<0 | 1 | 2>(0); // 0 = H, 1 = studio, 2 = done
   const [visible, setVisible] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const logoRef = useRef<HTMLImageElement | null>(null);
 
   useEffect(() => {
     const t0 = window.setTimeout(() => setVisible(true), 60);
@@ -36,7 +37,7 @@ export function SplashScreen({ onComplete }: SplashScreenProps) {
     };
   }, [onComplete]);
 
-  // Survivors walking toward the red-circled H in the dark.
+  // Survivors walking toward the red-circled H inside the splash logo.
   useEffect(() => {
     if (phase !== 0) return;
     const canvas = canvasRef.current;
@@ -51,7 +52,21 @@ export function SplashScreen({ onComplete }: SplashScreenProps) {
     resize();
     window.addEventListener('resize', resize);
 
-    // Spawn a handful of survivors at the edges.
+    // H center within the splash image (fraction of image dimensions).
+    const H_FRAC_X = 2662 / 3361;
+    const H_FRAC_Y = 531 / 1080;
+
+    const getTarget = () => {
+      const img = logoRef.current;
+      if (img) {
+        const r = img.getBoundingClientRect();
+        if (r.width > 0) {
+          return { x: r.left + r.width * H_FRAC_X, y: r.top + r.height * H_FRAC_Y };
+        }
+      }
+      return { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+    };
+
     const makeSurvivor = (w: number, h: number) => {
       const side = Math.floor(Math.random() * 4);
       let x = 0, y = 0;
@@ -69,17 +84,15 @@ export function SplashScreen({ onComplete }: SplashScreenProps) {
       const w = canvas.width;
       const h = canvas.height;
       ctx.clearRect(0, 0, w, h);
-      const cx = w / 2;
-      const cy = h / 2;
+      const target = getTarget();
 
       for (const s of survivors) {
-        const dx = cx - s.x;
-        const dy = cy - s.y;
+        const dx = target.x - s.x;
+        const dy = target.y - s.y;
         const dist = Math.hypot(dx, dy) || 1;
         s.x += (dx / dist) * s.speed;
         s.y += (dy / dist) * s.speed;
 
-        // Respawn when reaching the center.
         if (dist < 30) {
           const ns = makeSurvivor(w, h);
           s.x = ns.x;
@@ -90,7 +103,6 @@ export function SplashScreen({ onComplete }: SplashScreenProps) {
         const beamAngle = Math.atan2(dy, dx);
         const beamLen = 70;
 
-        // Flashlight beam pointing toward the H.
         ctx.save();
         ctx.translate(s.x, s.y);
         ctx.rotate(beamAngle);
@@ -106,10 +118,9 @@ export function SplashScreen({ onComplete }: SplashScreenProps) {
         ctx.fill();
         ctx.restore();
 
-        // Survivor body.
         ctx.beginPath();
         ctx.arc(s.x, s.y, 7, 0, Math.PI * 2);
-        ctx.fillStyle = '#9f1d22';
+        ctx.fillStyle = '#c9363b';
         ctx.fill();
         ctx.strokeStyle = '#f8fafc';
         ctx.lineWidth = 1.5;
@@ -150,20 +161,13 @@ export function SplashScreen({ onComplete }: SplashScreenProps) {
         style={{ opacity: visible ? 1 : 0 }}
       >
         {phase === 0 ? (
-          <>
-            <img
-              src="/icon.svg"
-              alt="LAST NIGHT helipad emblem"
-              className="w-24 h-24 sm:w-32 sm:h-32 drop-shadow-[0_0_24px_rgba(239,68,68,0.45)]"
-              draggable={false}
-            />
-            <div className="font-display text-4xl sm:text-6xl font-bold tracking-[0.18em] text-[#f8fafc]">
-              LAST NIGHT
-            </div>
-            <div className="text-xs sm:text-sm font-mono-num tracking-[0.3em] text-[#9c8b79]">
-              SEVEN HOURS. ONE CHANCE.
-            </div>
-          </>
+          <img
+            ref={logoRef}
+            src="/assets/lastnightlogo/lastnightlogo%20splash.png"
+            alt="LAST NIGHT"
+            className="w-[90vw] max-w-[1200px] h-auto"
+            draggable={false}
+          />
         ) : (
           <>
             <img

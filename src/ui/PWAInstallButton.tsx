@@ -40,9 +40,9 @@ export const PWAInstallButton: React.FC<{
         className={
           compact
             ? variant === 'secondary'
-              ? 'min-h-[42px] w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-[#19130f] hover:bg-[#231a14] border border-[#e26d27]/40 text-[#f39c59] text-xs font-medium transition-colors whitespace-nowrap shrink-0 cursor-pointer'
-              : 'min-h-[40px] flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-[#e26d27] hover:bg-[#f07c34] text-[#120d0a] text-xs font-semibold transition-colors whitespace-nowrap shrink-0 cursor-pointer'
-            : 'min-h-[46px] py-2.5 px-5 rounded-xl bg-[#19130f] hover:bg-[#231a14] border border-[#e26d27]/40 text-[#f39c59] text-sm font-medium text-left flex items-center justify-between transition-colors whitespace-nowrap cursor-pointer'
+              ? 'min-h-[42px] w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-[#19130f] hover:bg-[#231a14] border border-[#c9363b]/40 text-[#f39c59] text-xs font-medium transition-colors whitespace-nowrap shrink-0 cursor-pointer'
+              : 'min-h-[40px] flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-[#c9363b] hover:bg-[#d95338] text-[#120d0a] text-xs font-semibold transition-colors whitespace-nowrap shrink-0 cursor-pointer'
+            : 'min-h-[46px] py-2.5 px-5 rounded-xl bg-[#19130f] hover:bg-[#231a14] border border-[#c9363b]/40 text-[#f39c59] text-sm font-medium text-left flex items-center justify-between transition-colors whitespace-nowrap cursor-pointer'
         }
       >
         <span className="flex items-center gap-1.5">
@@ -107,7 +107,7 @@ export const PWAInstallButton: React.FC<{
             <button
               type="button"
               onClick={() => setShowGuide(false)}
-              className="mt-5 w-full py-2.5 rounded-lg bg-[#e26d27] hover:bg-[#f07c34] text-[#120d0a] text-xs font-semibold cursor-pointer"
+              className="mt-5 w-full py-2.5 rounded-lg bg-[#c9363b] hover:bg-[#d95338] text-[#120d0a] text-xs font-semibold cursor-pointer"
             >
               Got It
             </button>
@@ -123,7 +123,7 @@ export const OfflineIndicator: React.FC = () => {
   if (isOnline) return null;
 
   return (
-    <div className="fixed bottom-4 left-4 z-50 bg-[#140e0b]/95 border border-[#e26d27]/60 rounded-lg px-3 py-1.5 text-xs font-medium text-[#f7f2e7] pointer-events-none">
+    <div className="fixed bottom-4 left-4 z-50 bg-[#140e0b]/95 border border-[#c9363b]/60 rounded-lg px-3 py-1.5 text-xs font-medium text-[#f7f2e7] pointer-events-none">
       Offline Mode · Running from local cache
     </div>
   );

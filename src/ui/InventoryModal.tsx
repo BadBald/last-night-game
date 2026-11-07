@@ -287,7 +287,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
             </h2>
             <p className="text-[11px] sm:text-xs text-[#9c8b79] mt-0.5 font-mono-num truncate">
               Carry Weight{' '}
-              <span className={isEncumbered ? 'text-[#e26d27] font-semibold' : 'text-[#f7f2e7]'}>
+              <span className={isEncumbered ? 'text-[#c9363b] font-semibold' : 'text-[#f7f2e7]'}>
                 {snap.totalWeight.toFixed(1)}/{snap.maxWeight.toFixed(0)} kg
               </span>
               {isEncumbered ? ' · Encumbered' : ''}
@@ -314,7 +314,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
           }`}
         >
           {moveOrigin && (
-            <div className="mb-2.5 px-3 py-1.5 rounded-xl bg-[#e26d27]/16 border border-[#e26d27]/65 flex items-center justify-between gap-2 text-xs text-[#f7f2e7]">
+            <div className="mb-2.5 px-3 py-1.5 rounded-xl bg-[#c9363b]/16 border border-[#c9363b]/65 flex items-center justify-between gap-2 text-xs text-[#f7f2e7]">
               <span>
                 {padActive
                   ? `Select destination slot (Slots 1–4 = Quick Belt) and press [${gp.south}] to swap.`
@@ -336,14 +336,14 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
               {snap.activeContainer && (
                 <div>
                   <div className="flex items-center justify-between gap-2 mb-2">
-                    <span className="text-xs font-semibold text-[#e26d27] truncate">
+                    <span className="text-xs font-semibold text-[#c9363b] truncate">
                       {snap.activeContainer.label}{' '}
                       {padActive ? `([${gp.south}] Take)` : '(Tap twice to take)'}
                     </span>
                     <button
                       type="button"
                       onClick={onTakeAll}
-                      className="min-h-[40px] flex items-center gap-1.5 px-3.5 py-1.5 bg-[#e26d27] hover:bg-[#f07c34] active:scale-95 text-[#120d0a] rounded-xl text-xs font-semibold transition-all whitespace-nowrap shrink-0 cursor-pointer"
+                      className="min-h-[40px] flex items-center gap-1.5 px-3.5 py-1.5 bg-[#c9363b] hover:bg-[#d95338] active:scale-95 text-[#120d0a] rounded-xl text-xs font-semibold transition-all whitespace-nowrap shrink-0 cursor-pointer"
                     >
                       <ArrowDownToLine className="w-4 h-4" />
                       <span>Take All{padActive ? ` [${gp.north}]` : ''}</span>
@@ -379,11 +379,11 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
                           onClick={() => handleSlotTap('container', idx)}
                           className={`relative aspect-square min-h-[46px] rounded-xl border flex items-center justify-center cursor-pointer transition-colors ${
                             isSel
-                              ? 'bg-[#251b14] border-[#e26d27] ring-1 ring-[#e26d27]/45'
+                              ? 'bg-[#251b14] border-[#c9363b] ring-1 ring-[#c9363b]/45'
                               : isOrigin
                               ? 'bg-[#2a1d14] border-dashed border-[#f39c59]'
                               : moveOrigin
-                              ? 'bg-[#19130f] border-[#e26d27]/40'
+                              ? 'bg-[#19130f] border-[#c9363b]/40'
                               : 'bg-[#19130f]/95 border-[#e4d4c6]/14 hover:border-[#e4d4c6]/30'
                           }`}
                         >
@@ -442,13 +442,13 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
                         onClick={() => handleSlotTap('backpack', idx)}
                         className={`relative aspect-square min-h-[52px] rounded-xl border flex items-center justify-center cursor-pointer transition-colors ${
                           isSel
-                            ? 'bg-[#251b14] border-[#e26d27] ring-1 ring-[#e26d27]/45'
+                            ? 'bg-[#251b14] border-[#c9363b] ring-1 ring-[#c9363b]/45'
                             : isOrigin
                             ? 'bg-[#2a1d14] border-dashed border-[#f39c59]'
                             : moveOrigin
-                            ? 'bg-[#19130f] border-[#e26d27]/45'
+                            ? 'bg-[#19130f] border-[#c9363b]/45'
                             : isEq
-                            ? 'bg-[#e26d27]/15 border-[#e26d27]/75'
+                            ? 'bg-[#c9363b]/15 border-[#c9363b]/75'
                             : 'bg-[#19130f]/95 border-[#e4d4c6]/14 hover:border-[#e4d4c6]/30'
                         }`}
                       >
@@ -458,7 +458,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
                           </span>
                         )}
                         {isEq && (
-                          <span className="absolute top-1 right-1 text-[9px] font-mono-num font-semibold text-[#e26d27]">
+                          <span className="absolute top-1 right-1 text-[9px] font-mono-num font-semibold text-[#c9363b]">
                             EQ
                           </span>
                         )}
@@ -553,7 +553,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
                     <button
                       type="button"
                       onClick={() => onQuickTakeContainerSlot(selected.idx)}
-                      className="flex-1 min-h-[44px] py-2 px-4 rounded-xl bg-[#e26d27] hover:bg-[#f07c34] active:scale-95 text-[#120d0a] text-xs font-semibold transition-all whitespace-nowrap cursor-pointer"
+                      className="flex-1 min-h-[44px] py-2 px-4 rounded-xl bg-[#c9363b] hover:bg-[#d95338] active:scale-95 text-[#120d0a] text-xs font-semibold transition-all whitespace-nowrap cursor-pointer"
                     >
                       Take Item{padActive ? ` [${gp.south}]` : ''}
                     </button>
@@ -567,7 +567,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
                               setMoveOrigin(null);
                               onUseOrEquip(selected.idx);
                             }}
-                            className="flex-1 min-h-[44px] py-2 px-4 rounded-xl bg-[#e26d27] hover:bg-[#f07c34] active:scale-95 text-[#120d0a] text-xs font-semibold transition-all whitespace-nowrap cursor-pointer"
+                            className="flex-1 min-h-[44px] py-2 px-4 rounded-xl bg-[#c9363b] hover:bg-[#d95338] active:scale-95 text-[#120d0a] text-xs font-semibold transition-all whitespace-nowrap cursor-pointer"
                           >
                             {selected.idx === snap.equippedSlot
                               ? 'Unequip'
@@ -583,7 +583,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
                         }
                         className={`min-h-[44px] py-2 px-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1 transition-colors whitespace-nowrap cursor-pointer ${
                           moveOrigin
-                            ? 'bg-[#e26d27]/20 border-[#e26d27] text-[#f39c59]'
+                            ? 'bg-[#c9363b]/20 border-[#c9363b] text-[#f39c59]'
                             : 'bg-[#211913] hover:bg-[#2b2019] border-[#e4d4c6]/16 text-[#d8c7b4]'
                         }`}
                         title="Move or swap into Quick Belt slots 1–4"
