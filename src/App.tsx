@@ -13,12 +13,14 @@ import { MobileControls } from './ui/MobileControls';
 import { OfflineIndicator } from './ui/PWAInstallButton';
 import { PhoneModal } from './ui/PhoneModal';
 import { Screens } from './ui/Screens';
+import { SplashScreen } from './ui/SplashScreen';
 import { useFullscreen } from './ui/useFullscreen';
 
 export default function App() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const engineRef = useRef<GameEngine | null>(null);
   const [snap, setSnap] = useState<UISnapshot | null>(null);
+  const [showSplash, setShowSplash] = useState(true);
   const { isFullscreen, toggleFullscreen, fullscreenHint } = useFullscreen();
 
   useEffect(() => {
@@ -157,6 +159,7 @@ export default function App() {
       )}
 
       <OfflineIndicator />
+      {showSplash && <SplashScreen onComplete={() => setShowSplash(false)} />}
     </main>
   );
 }
