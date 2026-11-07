@@ -13,11 +13,10 @@ export default defineConfig(() => {
         registerType: 'autoUpdate',
         includeAssets: [
           'icon.svg',
-          'apple-touch-icon.png',
-          'pwa-192x192.png',
-          'pwa-512x512.png',
-          'pwa-maskable-512x512.png',
-          'assets/lastnightlogo/LAST NIGHT1.png',
+          'lastnight-apple-touch.png',
+          'lastnight-icon-192.png',
+          'lastnight-icon-512.png',
+          'lastnight-icon-maskable-512.png',
           'assets/lastnightlogo/LAST NIGHT2.png',
           'assets/lastnightlogo/lastnightlogo splash.png',
         ],
@@ -36,19 +35,19 @@ export default defineConfig(() => {
           categories: ['games', 'action'],
           icons: [
             {
-              src: '/pwa-192x192.png',
+              src: '/lastnight-icon-192.png',
               sizes: '192x192',
               type: 'image/png',
               purpose: 'any',
             },
             {
-              src: '/pwa-512x512.png',
+              src: '/lastnight-icon-512.png',
               sizes: '512x512',
               type: 'image/png',
               purpose: 'any',
             },
             {
-              src: '/pwa-maskable-512x512.png',
+              src: '/lastnight-icon-maskable-512.png',
               sizes: '512x512',
               type: 'image/png',
               purpose: 'maskable',
