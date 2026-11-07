@@ -18,6 +18,7 @@ export default defineConfig(() => {
           'pwa-512x512.png',
           'pwa-maskable-512x512.png',
           'assets/lastnightlogo/LAST NIGHT1.png',
+          'assets/lastnightlogo/LAST NIGHT2.png',
           'assets/lastnightlogo/lastnightlogo splash.png',
         ],
         manifest: {
